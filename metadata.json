@@ -1,0 +1,6 @@
+{
+  "name": "LifeNote AI",
+  "description": "Minimalist, intelligent life companion for journaling, personal plans, books, reusable AI skills, and context-aware conversational writing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

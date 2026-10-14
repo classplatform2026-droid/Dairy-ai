@@ -1,0 +1,430 @@
+{
+  "users": [
+    {
+      "id": "id_cwqlfinmv805d6b",
+      "name": "Tester",
+      "email": "test@example.com",
+      "passwordHash": "$2b$10$KHV01HwzsRUm9l4/E.qFvudIy2shETc4eckQEc6HhIDhuh.p/ofg6",
+      "isEmailVerified": false,
+      "verificationCode": "844381",
+      "bio": "Lifelong learner & reflective thinker.",
+      "writingPreference": "reflective",
+      "theme": "minimal-light",
+      "aiProvider": "gemini",
+      "selectedModel": "gemini-3.8-flash",
+      "createdAt": "2026-10-14T11:04:02.291Z",
+      "updatedAt": "2026-10-14T11:04:02.291Z"
+    },
+    {
+      "id": "id_yg5bww8mv80abop",
+      "name": "Alice",
+      "email": "alice1791976073363@example.com",
+      "passwordHash": "$2b$10$3G3vGl95i4aECMhzzM/bFeK51VtV9XyotU7t04O9QhqTzGpdANkgi",
+      "isEmailVerified": false,
+      "verificationCode": "160331",
+      "bio": "Lifelong learner & reflective thinker.",
+      "writingPreference": "reflective",
+      "theme": "minimal-light",
+      "aiProvider": "gemini",
+      "selectedModel": "gemini-3.1-flash-lite",
+      "createdAt": "2026-10-14T11:07:53.641Z",
+      "updatedAt": "2026-10-14T11:07:53.641Z"
+    },
+    {
+      "id": "id_ki1wbq9mv80ljfr",
+      "name": "Author 345",
+      "email": "author345@lifenote.ai",
+      "passwordHash": "$2b$10$rr/7SUeejYnrvcfrNDsKVOlS40cV7AZhLRCNT2Vb5DbILaxK480wi",
+      "isEmailVerified": false,
+      "verificationCode": "386186",
+      "bio": "Lifelong learner & reflective thinker.",
+      "writingPreference": "reflective",
+      "theme": "minimal-light",
+      "aiProvider": "gemini",
+      "selectedModel": "gemini-3.1-flash-lite",
+      "createdAt": "2026-10-14T11:16:36.903Z",
+      "updatedAt": "2026-10-14T11:16:36.903Z"
+    },
+    {
+      "id": "id_o4e5q11mv813wh5",
+      "name": "Saad",
+      "email": "test@lifenote.ai",
+      "passwordHash": "$2b$10$3Kwo3iYiaLLN4mPutTG0d.ELNlFofDasLRw8RGZDubMkVm/Ot7buy",
+      "isEmailVerified": false,
+      "verificationCode": "264048",
+      "bio": "Lifelong learner & reflective thinker.",
+      "writingPreference": "reflective",
+      "theme": "minimal-light",
+      "aiProvider": "gemini",
+      "selectedModel": "gemini-3.1-flash-lite",
+      "createdAt": "2026-10-14T11:30:53.609Z",
+      "updatedAt": "2026-10-14T11:30:53.609Z"
+    }
+  ],
+  "diaries": [
+    {
+      "id": "id_umo32e6mv805d6f",
+      "userId": "id_cwqlfinmv805d6b",
+      "title": "First Page of a New Chapter",
+      "content": "Welcome to LifeNote AI. This is your personal sanctuary for unfiltered thoughts, strategic life plans, creative book manuscripts, and AI-assisted reflection.\n\nTake a breath. Every great thought begins with a single line.",
+      "mood": "inspired",
+      "weather": "sunny",
+      "tags": [
+        "beginning",
+        "reflection"
+      ],
+      "location": "",
+      "date": "2026-10-14",
+      "wordCount": 32,
+      "favorite": true,
+      "createdAt": "2026-10-14T11:04:02.295Z",
+      "updatedAt": "2026-10-14T11:04:02.295Z"
+    },
+    {
+      "id": "id_bjfgzlvmv80abos",
+      "userId": "id_yg5bww8mv80abop",
+      "title": "First Page of a New Chapter",
+      "content": "Welcome to LifeNote AI. This is your personal sanctuary for unfiltered thoughts, strategic life plans, creative book manuscripts, and AI-assisted reflection.\n\nTake a breath. Every great thought begins with a single line.",
+      "mood": "inspired",
+      "weather": "sunny",
+      "tags": [
+        "beginning",
+        "reflection"
+      ],
+      "location": "",
+      "date": "2026-10-14",
+      "wordCount": 32,
+      "favorite": true,
+      "createdAt": "2026-10-14T11:07:53.644Z",
+      "updatedAt": "2026-10-14T11:07:53.644Z"
+    },
+    {
+      "id": "id_eh33te6mv80ljfv",
+      "userId": "id_ki1wbq9mv80ljfr",
+      "title": "First Page of a New Chapter",
+      "content": "Welcome to LifeNote AI. This is your personal sanctuary for unfiltered thoughts, strategic life plans, creative book manuscripts, and AI-assisted reflection.\n\nTake a breath. Every great thought begins with a single line.",
+      "mood": "inspired",
+      "weather": "sunny",
+      "tags": [
+        "beginning",
+        "reflection"
+      ],
+      "location": "",
+      "date": "2026-10-14",
+      "wordCount": 32,
+      "favorite": true,
+      "createdAt": "2026-10-14T11:16:36.907Z",
+      "updatedAt": "2026-10-14T11:16:36.907Z"
+    },
+    {
+      "id": "id_l6ojukimv813wh8",
+      "userId": "id_o4e5q11mv813wh5",
+      "title": "First Page of a New Chapter",
+      "content": "Welcome to LifeNote AI. This is your personal sanctuary for unfiltered thoughts, strategic life plans, creative book manuscripts, and AI-assisted reflection.\n\nTake a breath. Every great thought begins with a single line.",
+      "mood": "inspired",
+      "weather": "sunny",
+      "tags": [
+        "beginning",
+        "reflection"
+      ],
+      "location": "",
+      "date": "2026-10-14",
+      "wordCount": 32,
+      "favorite": true,
+      "createdAt": "2026-10-14T11:30:53.612Z",
+      "updatedAt": "2026-10-14T11:30:53.612Z"
+    }
+  ],
+  "plans": [
+    {
+      "id": "id_5ber3dpmv805d6f",
+      "userId": "id_cwqlfinmv805d6b",
+      "title": "Life Foundation & Daily Cadence",
+      "description": "Establish daily mindfulness, writing habits, and clear personal goals.",
+      "category": "Personal",
+      "priority": "high",
+      "deadline": "",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "id_rwzy36lmv805d6f",
+          "title": "Write first journal entry in LifeNote AI",
+          "completed": true,
+          "order": 1
+        },
+        {
+          "id": "id_h6zyabtmv805d6f",
+          "title": "Explore AI writing refinement tools",
+          "completed": false,
+          "order": 2
+        },
+        {
+          "id": "id_uli5z9qmv805d6f",
+          "title": "Create a custom skill in the Skills Library",
+          "completed": false,
+          "order": 3
+        }
+      ],
+      "notes": "Consistency over perfection.",
+      "progress": 33,
+      "createdAt": "2026-10-14T11:04:02.295Z",
+      "updatedAt": "2026-10-14T11:04:02.295Z"
+    },
+    {
+      "id": "id_4ff1tk5mv80abos",
+      "userId": "id_yg5bww8mv80abop",
+      "title": "Life Foundation & Daily Cadence",
+      "description": "Establish daily mindfulness, writing habits, and clear personal goals.",
+      "category": "Personal",
+      "priority": "high",
+      "deadline": "",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "id_u3xgp5nmv80abos",
+          "title": "Write first journal entry in LifeNote AI",
+          "completed": true,
+          "order": 1
+        },
+        {
+          "id": "id_8scjym7mv80abos",
+          "title": "Explore AI writing refinement tools",
+          "completed": false,
+          "order": 2
+        },
+        {
+          "id": "id_uhqjtyhmv80abos",
+          "title": "Create a custom skill in the Skills Library",
+          "completed": false,
+          "order": 3
+        }
+      ],
+      "notes": "Consistency over perfection.",
+      "progress": 33,
+      "createdAt": "2026-10-14T11:07:53.644Z",
+      "updatedAt": "2026-10-14T11:07:53.644Z"
+    },
+    {
+      "id": "id_zma2hm2mv80axhe",
+      "userId": "id_cwqlfinmv805d6b",
+      "title": "Novel Chapter 1 Kickoff",
+      "description": "",
+      "category": "Personal",
+      "priority": "medium",
+      "deadline": "",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "id_px07qadmv80axhe",
+          "title": "Brainstorm the core conflict and primary setting for the opening scene.",
+          "completed": false,
+          "order": 1
+        },
+        {
+          "id": "id_ipnelxnmv80axhe",
+          "title": "Draft a character sketch or motivation profile for your protagonist.",
+          "completed": false,
+          "order": 2
+        },
+        {
+          "id": "id_r6bv1rhmv80axhe",
+          "title": "Write a 500-word 'zero draft' focusing on the opening hook.",
+          "completed": false,
+          "order": 3
+        }
+      ],
+      "notes": "",
+      "progress": 0,
+      "createdAt": "2026-10-14T11:08:21.890Z",
+      "updatedAt": "2026-10-14T11:08:21.890Z"
+    },
+    {
+      "id": "id_3vw7srkmv80ljfv",
+      "userId": "id_ki1wbq9mv80ljfr",
+      "title": "Life Foundation & Daily Cadence",
+      "description": "Establish daily mindfulness, writing habits, and clear personal goals.",
+      "category": "Personal",
+      "priority": "high",
+      "deadline": "",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "id_ivsprnhmv80ljfv",
+          "title": "Write first journal entry in LifeNote AI",
+          "completed": true,
+          "order": 1
+        },
+        {
+          "id": "id_nqzk7simv80ljfv",
+          "title": "Explore AI writing refinement tools",
+          "completed": false,
+          "order": 2
+        },
+        {
+          "id": "id_8ukwovxmv80ljfv",
+          "title": "Create a custom skill in the Skills Library",
+          "completed": false,
+          "order": 3
+        }
+      ],
+      "notes": "Consistency over perfection.",
+      "progress": 33,
+      "createdAt": "2026-10-14T11:16:36.907Z",
+      "updatedAt": "2026-10-14T11:16:36.907Z"
+    },
+    {
+      "id": "id_140ng2mmv813wh8",
+      "userId": "id_o4e5q11mv813wh5",
+      "title": "Life Foundation & Daily Cadence",
+      "description": "Establish daily mindfulness, writing habits, and clear personal goals.",
+      "category": "Personal",
+      "priority": "high",
+      "deadline": "",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "id_j2q4jvpmv813wh8",
+          "title": "Write first journal entry in LifeNote AI",
+          "completed": true,
+          "order": 1
+        },
+        {
+          "id": "id_dxukgfbmv813wh8",
+          "title": "Explore AI writing refinement tools",
+          "completed": false,
+          "order": 2
+        },
+        {
+          "id": "id_nbuxp3qmv813wh8",
+          "title": "Create a custom skill in the Skills Library",
+          "completed": false,
+          "order": 3
+        }
+      ],
+      "notes": "Consistency over perfection.",
+      "progress": 33,
+      "createdAt": "2026-10-14T11:30:53.612Z",
+      "updatedAt": "2026-10-14T11:30:53.612Z"
+    }
+  ],
+  "books": [],
+  "chapters": [],
+  "skills": [
+    {
+      "id": "sys-skill-prose-polish",
+      "isSystem": true,
+      "name": "Prose Polisher",
+      "category": "Writing",
+      "description": "Elevate vocabulary, cadence, and elegance without losing your original voice.",
+      "promptTemplate": "Please polish the following personal writing. Retain the core emotion and thoughts, but enhance the sentence flow, cadence, and vocabulary for literary quality:\n\n\"{text}\"",
+      "variables": [
+        "text"
+      ],
+      "tags": [
+        "writing",
+        "polish",
+        "elegance"
+      ],
+      "icon": "Feather",
+      "createdAt": "2026-10-14T11:03:56.234Z",
+      "updatedAt": "2026-10-14T11:03:56.234Z"
+    },
+    {
+      "id": "sys-skill-grammar-style",
+      "isSystem": true,
+      "name": "Grammar & Clarity Fixer",
+      "category": "Refinement",
+      "description": "Correct typos, punctuation, syntactic friction, and awkward sentence structures.",
+      "promptTemplate": "Fix all grammatical mistakes, spelling errors, and punctuation flaws in the following text. Keep the tone natural and clear without changing the underlying meaning:\n\n\"{text}\"",
+      "variables": [
+        "text"
+      ],
+      "tags": [
+        "grammar",
+        "clarity",
+        "proofing"
+      ],
+      "icon": "CheckCircle",
+      "createdAt": "2026-10-14T11:03:56.234Z",
+      "updatedAt": "2026-10-14T11:03:56.234Z"
+    },
+    {
+      "id": "sys-skill-weekly-retro",
+      "isSystem": true,
+      "name": "Retrospective Extractor",
+      "category": "Summarization",
+      "description": "Extract key themes, emotional highlights, wins, and reflections from your journal entries.",
+      "promptTemplate": "Analyze the following journal entry or notes. Extract: 1) Core Themes, 2) Key Emotional Highlights, 3) Notable Accomplishments/Wins, and 4) Actionable Insights for Tomorrow:\n\n\"{text}\"",
+      "variables": [
+        "text"
+      ],
+      "tags": [
+        "reflection",
+        "journal",
+        "insights"
+      ],
+      "icon": "Compass",
+      "createdAt": "2026-10-14T11:03:56.234Z",
+      "updatedAt": "2026-10-14T11:03:56.234Z"
+    },
+    {
+      "id": "sys-skill-action-harvest",
+      "isSystem": true,
+      "name": "Action Item Harvester",
+      "category": "Planning",
+      "description": "Find implicit tasks, commitments, and deadlines buried in your reflections.",
+      "promptTemplate": "Read through the text below and extract any concrete action items, pending tasks, or commitments. Format them as a concise checklist with suggested priorities (High/Medium/Low):\n\n\"{text}\"",
+      "variables": [
+        "text"
+      ],
+      "tags": [
+        "tasks",
+        "planning",
+        "action"
+      ],
+      "icon": "ListChecks",
+      "createdAt": "2026-10-14T11:03:56.234Z",
+      "updatedAt": "2026-10-14T11:03:56.234Z"
+    },
+    {
+      "id": "sys-skill-chapter-outline",
+      "isSystem": true,
+      "name": "Chapter Outliner",
+      "category": "Creative",
+      "description": "Transform raw journal entries or story concepts into a structured book chapter.",
+      "promptTemplate": "Transform the following notes or thoughts into a structured book chapter. Provide: 1) Chapter Title, 2) Narrative Arc Hook, 3) 3-4 Key Beats/Scenes, and 4) Closing Reflection:\n\n\"{text}\"",
+      "variables": [
+        "text"
+      ],
+      "tags": [
+        "book",
+        "chapters",
+        "storytelling"
+      ],
+      "icon": "BookOpen",
+      "createdAt": "2026-10-14T11:03:56.234Z",
+      "updatedAt": "2026-10-14T11:03:56.234Z"
+    },
+    {
+      "id": "sys-skill-poetic",
+      "isSystem": true,
+      "name": "Poetic Metaphorist",
+      "category": "Creative",
+      "description": "Reimagine thoughts through subtle metaphors, evocative imagery, and lyrical prose.",
+      "promptTemplate": "Re-envision the following passage with poetic resonance. Use natural, contemplative imagery and subtle metaphors while keeping the emotional heart sincere:\n\n\"{text}\"",
+      "variables": [
+        "text"
+      ],
+      "tags": [
+        "poetry",
+        "creative",
+        "lyrical"
+      ],
+      "icon": "Sparkles",
+      "createdAt": "2026-10-14T11:03:56.234Z",
+      "updatedAt": "2026-10-14T11:03:56.234Z"
+    }
+  ],
+  "chats": [],
+  "messages": []
+}
