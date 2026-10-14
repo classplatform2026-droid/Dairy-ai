@@ -65,6 +65,7 @@ function MainApp() {
       {/* 1. Desktop Persistent Sidebar & Mobile Drawer */}
       <Sidebar
         currentView={currentView}
+        activeChatId={viewParams?.chatId}
         onNavigate={handleNavigate}
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
@@ -93,6 +94,7 @@ function MainApp() {
           {currentView === 'diary' && (
             <DiaryView
               initialSelectedId={viewParams?.selectedId}
+              initialSelectedDate={viewParams?.selectedDate}
               initialCreateNew={viewParams?.createNew}
               onOpenReader={() => handleNavigate('reader')}
             />
@@ -118,7 +120,13 @@ function MainApp() {
           )}
 
           {currentView === 'chat' && (
-            <ChatView />
+            <ChatView
+              initialPrompt={viewParams?.initialPrompt}
+              initialMode={viewParams?.mode}
+              selectedChatId={viewParams?.chatId}
+              initialCreateNew={viewParams?.createNew}
+              onChatSelected={(chatId) => setViewParams((prev: any) => ({ ...prev, chatId }))}
+            />
           )}
 
           {currentView === 'profile' && (

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api.js';
 import { DiaryEntry } from '../../types/index.js';
+import {
+  compareDateAsc,
+  formatHumanDate,
+  formatShortDate,
+  normalizeDate,
+} from '../../utils/date.js';
 import { ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Sliders, Calendar } from 'lucide-react';
 
 interface DiaryReaderViewProps {
@@ -19,10 +25,17 @@ export const DiaryReaderView: React.FC<DiaryReaderViewProps> = ({ onBack }) => {
       try {
         setLoading(true);
         const res = await api.diaries.list();
-        // Sort chronologically for reading as a life story
-        const sorted = (res.entries || []).sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
+        // Deduplicate per date & sort chronologically for reading as a life story
+        const raw = res.entries || [];
+        const dateMap = new Map<string, DiaryEntry>();
+        for (const item of raw) {
+          const cleanDate = normalizeDate(item.date);
+          const existing = dateMap.get(cleanDate);
+          if (!existing || (item.content || '').length >= (existing.content || '').length) {
+            dateMap.set(cleanDate, { ...item, date: cleanDate });
+          }
+        }
+        const sorted = Array.from(dateMap.values()).sort((a, b) => compareDateAsc(a.date, b.date));
         setEntries(sorted);
       } catch (err) {
         console.error('Failed to load reader entries:', err);
@@ -113,7 +126,7 @@ export const DiaryReaderView: React.FC<DiaryReaderViewProps> = ({ onBack }) => {
         <div className="space-y-8 animate-in fade-in duration-200">
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-2 text-xs text-neutral-400 font-mono">
-              <span>{currentEntry.date}</span>
+              <span className="font-medium text-neutral-600">{formatHumanDate(currentEntry.date)}</span>
               <span aria-hidden="true">·</span>
               <span className="capitalize">{currentEntry.mood}</span>
               <span aria-hidden="true">·</span>
@@ -162,7 +175,7 @@ export const DiaryReaderView: React.FC<DiaryReaderViewProps> = ({ onBack }) => {
             <section key={entry.id || (entry as any)._id} className="pt-12 first:pt-0 space-y-4">
               <div className="flex items-baseline justify-between gap-4">
                 <div className="text-xs text-neutral-400 font-mono">
-                  <span>{entry.date}</span>
+                  <span className="font-semibold text-neutral-700">{formatHumanDate(entry.date)}</span>
                   <span className="mx-1.5">·</span>
                   <span className="capitalize">{entry.mood}</span>
                 </div>

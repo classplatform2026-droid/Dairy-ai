@@ -84,6 +84,8 @@ export const api = {
     },
     get: (id: string) =>
       request<{ entry: any }>(`/diaries/${id}`),
+    getByDate: (date: string) =>
+      request<{ entry: any }>(`/diaries/by-date/${date}`),
     create: (data: any) =>
       request<{ entry: any }>('/diaries', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
@@ -92,6 +94,11 @@ export const api = {
       request<{ success: boolean }>(`/diaries/${id}`, { method: 'DELETE' }),
     aiRefine: (id: string, data: { action: string; tone?: string; customText?: string }) =>
       request<{ original: string; refined: string; action: string }>(`/diaries/${id}/ai-refine`, { method: 'POST', body: JSON.stringify(data) }),
+    aiUpdatePage: (data: { date: string; currentContent: string; userMessage: string }) =>
+      request<{ date: string; updatedContent: string; explanation: string; entry?: any }>('/diaries/ai-update-page', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Plans

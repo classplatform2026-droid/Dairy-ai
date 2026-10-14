@@ -18,14 +18,14 @@ function getGenAIClient(customApiKey?: string): GoogleGenAI {
 // Resilient executor with model fallback on 503 / temporary capacity issues
 async function generateWithFallback(
   ai: GoogleGenAI,
-  preferredModel: string = 'gemini-3.1-flash-lite',
+  preferredModel: string = 'gemini-3.8-flash',
   generateParams: { contents: any; config?: any }
 ) {
   const fallbackModels = [
-    preferredModel || 'gemini-3.1-flash-lite',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-latest',
+    preferredModel || 'gemini-3.8-flash',
     'gemini-3.8-flash',
+    'gemini-flash-latest',
+    'gemini-3.1-flash-lite',
   ];
 
   const modelsToTry = Array.from(new Set(fallbackModels));
@@ -39,7 +39,7 @@ async function generateWithFallback(
         config: generateParams.config,
       });
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Timeout after 4000ms on model ${model}`)), 4000)
+        setTimeout(() => reject(new Error(`Timeout after 25000ms on model ${model}`)), 25000)
       );
       const response = (await Promise.race([callPromise, timeoutPromise])) as any;
       return { response, usedModel: model };
@@ -53,7 +53,7 @@ async function generateWithFallback(
   throw lastError;
 }
 
-export async function testAIConnection(customApiKey?: string, model: string = 'gemini-3.1-flash-lite'): Promise<{ success: boolean; message: string; model: string }> {
+export async function testAIConnection(customApiKey?: string, model: string = 'gemini-3.8-flash'): Promise<{ success: boolean; message: string; model: string }> {
   try {
     const ai = getGenAIClient(customApiKey);
     const { response, usedModel } = await generateWithFallback(ai, model, {
@@ -70,7 +70,7 @@ export async function testAIConnection(customApiKey?: string, model: string = 'g
     return {
       success: false,
       message: err.message || 'Failed to connect to AI provider.',
-      model: model || 'gemini-3.1-flash-lite',
+      model: model || 'gemini-3.8-flash',
     };
   }
 }
@@ -216,6 +216,16 @@ ${contextText ? contextText : '(No attached resources)'}
 
 Attachments: ${attachments && attachments.length > 0 ? attachments.map(a => `${a.type.toUpperCase()}: "${a.title}"`).join(', ') : 'None'}
 
+CORE DIARY CONSTITUTION (CRITICAL):
+A Diary/Journal is strictly organized by DATE. Each calendar day has ONE single continuous page (not chapters or standalone topic titles).
+When Mode is DIARY or when the conversation is about a diary entry:
+1. Every message the user sends contributes to that specific day's single page.
+2. If previous text for this day is provided in context (e.g., '[TODAY\'S EXISTING DIARY PAGE]' or '[EXISTING DIARY ENTRY]'):
+   - When the user gives new thoughts or events, integrate and append them into the existing text for today in natural chronological flow.
+   - When the user asks to update, correct, or refine previous information (e.g., changing times, names, details, or tone), update that specific part while preserving the rest of today's page.
+   - In 'actionProposal', always return the COMPLETE, unified text for that day's page so far.
+   - Use 'type': 'update_diary' (or 'create_diary' if no entry existed yet) with 'targetId' set to the existing entry's ID.
+
 Your responsibilities:
 1. Provide thoughtful, beautifully crafted, and empathetic responses.
 2. Analyze user intent: classify it into one of: 'write', 'improve', 'summarize', 'plan', 'save', 'general'.
@@ -228,11 +238,11 @@ Your responsibilities:
     "explanation": "Brief 1-sentence reason for this intent"
   },
   "actionProposal": null OR {
-    "type": "create_diary | update_plan | add_chapter | create_skill",
+    "type": "create_diary | update_diary | update_plan | add_chapter | create_skill",
     "targetId": "ID of resource if updating an existing one, else omit",
     "targetName": "Name or title of the target",
     "data": {
-      // For create_diary: { "title": "...", "content": "...", "mood": "thoughtful", "tags": [...] }
+      // For create_diary / update_diary: { "title": "Journal: YYYY-MM-DD", "content": "Full integrated text for today...", "date": "YYYY-MM-DD", "mood": "thoughtful", "tags": [...] }
       // For update_plan: { "planTitle": "...", "newTasks": ["task 1", "task 2"], "notes": "..." }
       // For add_chapter: { "chapterTitle": "...", "content": "..." }
       // For create_skill: { "name": "...", "description": "...", "promptTemplate": "..." }
@@ -244,7 +254,7 @@ Your responsibilities:
   const fullPrompt = `${systemPrompt}\n\n=== Conversation History ===\n${conversationHistory}\n\nRespond with valid JSON:`;
 
   try {
-    const { response } = await generateWithFallback(ai, model || 'gemini-3.1-flash-lite', {
+    const { response } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
       contents: fullPrompt,
       config: {
         responseMimeType: 'application/json',

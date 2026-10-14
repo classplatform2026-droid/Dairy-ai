@@ -25,6 +25,7 @@ export async function initDatabase(): Promise<{ type: 'mongodb' | 'local'; conne
 
   try {
     mongoose.set('strictQuery', true);
+    mongoose.set('bufferCommands', false);
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 3000,
     });
@@ -124,18 +125,35 @@ export const db = {
       }
       return localStore.getDiaryById(userId, id);
     },
-    create: async (userId: string, data: any) => {
+    findByDate: async (userId: string, date: string) => {
+      const targetDate = String(date).split('T')[0].trim();
       if (isMongooseConnected) {
+        return DiaryEntryModel.findOne({ userId, date: targetDate }).lean();
+      }
+      return localStore.getDiaryByDate(userId, targetDate);
+    },
+    create: async (userId: string, data: any) => {
+      const targetDate = data.date ? String(data.date).split('T')[0].trim() : new Date().toISOString().split('T')[0];
+      if (isMongooseConnected) {
+        const existing = await DiaryEntryModel.findOne({ userId, date: targetDate });
+        if (existing) {
+          const words = (data.content !== undefined ? data.content : existing.content || '').trim().split(/\s+/).filter(Boolean).length;
+          return DiaryEntryModel.findOneAndUpdate(
+            { _id: existing._id, userId },
+            { $set: { ...data, date: targetDate, wordCount: words } },
+            { new: true }
+          ).lean();
+        }
         const words = (data.content || '').trim().split(/\s+/).filter(Boolean).length;
         const entry = await DiaryEntryModel.create({
           userId,
-          title: data.title || 'Untitled Entry',
+          title: data.title || `Journal: ${targetDate}`,
           content: data.content || '',
           mood: data.mood || 'thoughtful',
           weather: data.weather || 'sunny',
           tags: data.tags || [],
           location: data.location || '',
-          date: data.date || new Date().toISOString().split('T')[0],
+          date: targetDate,
           wordCount: words,
           favorite: !!data.favorite,
         });

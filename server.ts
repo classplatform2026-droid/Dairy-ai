@@ -49,6 +49,26 @@ async function startServer() {
   app.use('/api/chats', chatRoutes);
   app.use('/api/ai', aiRoutes);
 
+  // Database & server error middleware for API routes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (
+      err.name === 'MongooseError' ||
+      err.name === 'MongoNetworkError' ||
+      (err.message && err.message.includes('buffering timed out'))
+    ) {
+      console.warn('[AI Studio] Database offline — returning mock empty response');
+      if (req.method === 'GET') {
+        return res.json(req.path.endsWith('s') || req.path.endsWith('s/') ? [] : {});
+      }
+      return res.status(503).json({ error: 'Service temporarily unavailable (database offline)' });
+    }
+    if (req.path.startsWith('/api')) {
+      console.error('[LifeNote AI] API error:', err);
+      return res.status(500).json({ error: err.message || 'Internal server error' });
+    }
+    next(err);
+  });
+
   // Global API error handler for unmatched /api requests
   app.use('/api/*', (_req, res) => {
     res.status(404).json({ error: 'API endpoint not found' });
@@ -57,7 +77,7 @@ async function startServer() {
   // Vite middleware in dev or static files in production
   if (!isProd) {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, allowedHosts: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);

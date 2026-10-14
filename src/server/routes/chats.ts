@@ -115,11 +115,46 @@ router.post('/:id/messages', async (req: AuthenticatedRequest, res: Response): P
     // 2. Build context from attachments & linked resources
     let contextSnippets: string[] = [];
 
+    // Auto-attach current day's diary entry if in 'diary' mode or discussing diary
+    let targetDiary: any = null;
+    const isDiaryMode = chat.mode === 'diary' || (Array.isArray(attachments) && attachments.some(a => a.type === 'diary'));
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (chat.linkedResourceId) {
+        targetDiary = await db.diaries.findById(req.user!.id, chat.linkedResourceId);
+      }
+      if (!targetDiary && Array.isArray(attachments)) {
+        const diaryAtt = attachments.find(a => a.type === 'diary');
+        if (diaryAtt) {
+          targetDiary = await db.diaries.findById(req.user!.id, diaryAtt.id);
+        }
+      }
+      if (!targetDiary) {
+        targetDiary = await db.diaries.findByDate(req.user!.id, todayStr);
+      }
+
+      if (targetDiary) {
+        contextSnippets.unshift(`[CURRENT DIARY PAGE FOR DATE: ${targetDiary.date} (Entry ID: ${targetDiary.id || (targetDiary as any)._id})]:
+Title: "${targetDiary.title}"
+Current Page Content:
+${targetDiary.content}
+
+CRITICAL INSTRUCTION FOR DIARY:
+The text above is what the user already has written for this day (${targetDiary.date}).
+When the user gives a new thought, moment, or instruction to add/update:
+- Integrate the new information into this day's single page text.
+- If updating or correcting facts, update them in place while keeping the rest of today's record.
+- Always provide the full unified daily page in actionProposal.data.content with targetId: "${targetDiary.id || (targetDiary as any)._id}".`);
+      } else {
+        contextSnippets.unshift(`[CURRENT DIARY STATUS FOR TODAY (${todayStr})]:
+No diary page written yet for today. When the user writes their first message for today, create the initial text for today's single page (${todayStr}) in actionProposal.`);
+      }
+    }
+
     if (Array.isArray(attachments) && attachments.length > 0) {
       for (const att of attachments) {
         if (att.type === 'diary') {
           const entry = await db.diaries.findById(req.user!.id, att.id);
-          if (entry) {
+          if (entry && (!targetDiary || (targetDiary.id || (targetDiary as any)._id) !== att.id)) {
             contextSnippets.push(`[DIARY ENTRY: "${entry.title}" (${entry.date})]\n${entry.content}`);
           }
         } else if (att.type === 'plan') {
@@ -135,7 +170,6 @@ router.post('/:id/messages', async (req: AuthenticatedRequest, res: Response): P
             contextSnippets.push(`[BOOK: "${book.title}"]\nGenre: ${book.genre}\nDescription: ${book.description}\nChapters: ${chaptersSummary}`);
           }
         } else if (att.type === 'chapter') {
-          // Chapter ID can be fetched
           const ch = await db.chapters.findById(req.user!.id, att.id);
           if (ch) {
             contextSnippets.push(`[CHAPTER: "${ch.title}"]\n${ch.content}`);
@@ -208,14 +242,36 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
     const dataToUse = actionData || proposal.data;
     let createdResource: any = null;
 
-    if (proposal.type === 'create_diary') {
-      createdResource = await db.diaries.create(req.user!.id, {
-        title: dataToUse.title || 'Journal Entry',
-        content: dataToUse.content || '',
-        mood: dataToUse.mood || 'thoughtful',
-        tags: dataToUse.tags || ['ai-chat'],
-        date: dataToUse.date || new Date().toISOString().split('T')[0],
-      });
+    if (proposal.type === 'create_diary' || proposal.type === 'update_diary') {
+      const targetDate = dataToUse.date || new Date().toISOString().split('T')[0];
+      const userDiaries = await db.diaries.findMany(req.user!.id);
+      let existingForDate = proposal.targetId
+        ? await db.diaries.findById(req.user!.id, proposal.targetId)
+        : null;
+
+      if (!existingForDate) {
+        existingForDate = userDiaries.find((d: any) => d.date === targetDate);
+      }
+
+      if (existingForDate) {
+        const idToUpdate = existingForDate.id || (existingForDate as any)._id;
+        createdResource = await db.diaries.update(req.user!.id, idToUpdate, {
+          title: dataToUse.title || existingForDate.title || `Journal: ${targetDate}`,
+          content: dataToUse.content || '',
+          mood: dataToUse.mood || existingForDate.mood || 'thoughtful',
+          weather: dataToUse.weather || existingForDate.weather || 'sunny',
+          date: targetDate,
+        });
+      } else {
+        createdResource = await db.diaries.create(req.user!.id, {
+          title: dataToUse.title || `Journal: ${targetDate}`,
+          content: dataToUse.content || '',
+          mood: dataToUse.mood || 'thoughtful',
+          weather: dataToUse.weather || 'sunny',
+          tags: dataToUse.tags || ['daily-journal'],
+          date: targetDate,
+        });
+      }
     } else if (proposal.type === 'update_plan') {
       if (proposal.targetId) {
         const plan = await db.plans.findById(req.user!.id, proposal.targetId);

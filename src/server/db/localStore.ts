@@ -215,18 +215,34 @@ class LocalStore {
     return this.state.diaries.find(d => (d.id === id || d._id === id) && d.userId === userId) || null;
   }
 
+  public async getDiaryByDate(userId: string, date: string) {
+    const targetDate = String(date).split('T')[0].trim();
+    return this.state.diaries.find(d => d.userId === userId && String(d.date).split('T')[0].trim() === targetDate) || null;
+  }
+
   public async createDiary(userId: string, data: any) {
+    const targetDate = data.date ? String(data.date).split('T')[0].trim() : new Date().toISOString().split('T')[0];
+    
+    // Check if an entry for this date already exists for this user
+    const existing = this.state.diaries.find(d => d.userId === userId && String(d.date).split('T')[0].trim() === targetDate);
+    if (existing) {
+      return this.updateDiary(userId, existing.id || existing._id, {
+        ...data,
+        date: targetDate,
+      });
+    }
+
     const words = (data.content || '').trim().split(/\s+/).filter(Boolean).length;
     const entry = {
       id: this.generateId(),
       userId,
-      title: data.title || 'Untitled Entry',
+      title: data.title || `Journal: ${targetDate}`,
       content: data.content || '',
       mood: data.mood || 'thoughtful',
       weather: data.weather || 'sunny',
       tags: data.tags || [],
       location: data.location || '',
-      date: data.date || new Date().toISOString().split('T')[0],
+      date: targetDate,
       wordCount: words,
       favorite: !!data.favorite,
       createdAt: new Date().toISOString(),
