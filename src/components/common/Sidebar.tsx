@@ -186,13 +186,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               <div className="space-y-0.5">
-                {recentChats.slice(0, 15).map((chat) => {
+                {recentChats.slice(0, 15).map((chat, idx) => {
                   const chatId = chat.id || chat._id;
                   const isCurrent = currentView === 'chat' && activeChatId === chatId;
 
                   return (
                     <div
-                      key={chatId}
+                      key={chatId ? `${chatId}-${idx}` : `chat-${idx}`}
                       onClick={() => handleNavClick('chat', { chatId })}
                       className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                         isCurrent

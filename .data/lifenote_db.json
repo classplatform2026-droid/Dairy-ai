@@ -59,6 +59,21 @@
       "selectedModel": "gemini-3.1-flash-lite",
       "createdAt": "2026-10-14T11:30:53.609Z",
       "updatedAt": "2026-10-14T11:30:53.609Z"
+    },
+    {
+      "id": "id_053616rmv856i7m",
+      "name": "Saad1289",
+      "email": "sad@example.com",
+      "passwordHash": "$2b$10$CRgvbgmHwFEVxMyhb8yw9u950IZLg4RZ5IoJfaKIJtveionDuIzJW",
+      "isEmailVerified": false,
+      "verificationCode": "871987",
+      "bio": "Lifelong learner & reflective thinker.",
+      "writingPreference": "reflective",
+      "theme": "minimal-light",
+      "aiProvider": "gemini",
+      "selectedModel": "gemini-3.1-flash-lite",
+      "createdAt": "2026-10-14T13:24:53.554Z",
+      "updatedAt": "2026-10-14T13:24:53.554Z"
     }
   ],
   "diaries": [
@@ -133,6 +148,25 @@
       "favorite": true,
       "createdAt": "2026-10-14T11:30:53.612Z",
       "updatedAt": "2026-10-14T11:30:53.612Z"
+    },
+    {
+      "id": "id_rmeaaa1mv8587ni",
+      "userId": "id_053616rmv856i7m",
+      "title": "Journal: 2026-10-14",
+      "content": "আজকের দিনটি বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে। জাভা শেখার বিষয়টি নিয়ে শুরুতে কিছুটা দ্বিধায় থাকলেও, শিখতে পারার আনন্দই এখন মুখ্য।",
+      "mood": "positive",
+      "weather": "sunny",
+      "tags": [
+        "daily-log",
+        "learning",
+        "productivity"
+      ],
+      "location": "",
+      "date": "2026-10-14",
+      "wordCount": 38,
+      "favorite": false,
+      "createdAt": "2026-10-14T13:26:13.182Z",
+      "updatedAt": "2026-10-14T13:50:46.553Z"
     }
   ],
   "plans": [
@@ -305,6 +339,40 @@
       "progress": 33,
       "createdAt": "2026-10-14T11:30:53.612Z",
       "updatedAt": "2026-10-14T11:30:53.612Z"
+    },
+    {
+      "id": "id_oqqdi5kmv856i7r",
+      "userId": "id_053616rmv856i7m",
+      "title": "Life Foundation & Daily Cadence",
+      "description": "Establish daily mindfulness, writing habits, and clear personal goals.",
+      "category": "Personal",
+      "priority": "high",
+      "deadline": "",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "id_t4pbniumv856i7r",
+          "title": "Write first journal entry in LifeNote AI",
+          "completed": true,
+          "order": 1
+        },
+        {
+          "id": "id_uugj2t3mv856i7r",
+          "title": "Explore AI writing refinement tools",
+          "completed": false,
+          "order": 2
+        },
+        {
+          "id": "id_1u8x20mmv856i7r",
+          "title": "Create a custom skill in the Skills Library",
+          "completed": false,
+          "order": 3
+        }
+      ],
+      "notes": "Consistency over perfection.",
+      "progress": 33,
+      "createdAt": "2026-10-14T13:24:53.559Z",
+      "updatedAt": "2026-10-14T13:24:53.559Z"
     }
   ],
   "books": [],
@@ -425,6 +493,386 @@
       "updatedAt": "2026-10-14T11:03:56.234Z"
     }
   ],
-  "chats": [],
-  "messages": []
+  "chats": [
+    {
+      "id": "id_4xouzq5mv869zvs",
+      "userId": "id_053616rmv856i7m",
+      "title": "Test Bengali Chat",
+      "mode": "default",
+      "createdAt": "2026-10-14T13:55:36.040Z",
+      "updatedAt": "2026-10-14T13:55:36.068Z"
+    },
+    {
+      "id": "id_e3xf2gbmv85d48d",
+      "userId": "id_053616rmv856i7m",
+      "title": "Aj ki korbo bujte parsi na karon eta...",
+      "mode": "default",
+      "createdAt": "2026-10-14T13:30:02.029Z",
+      "updatedAt": "2026-10-14T13:48:35.385Z"
+    },
+    {
+      "id": "id_jxng8xsmv857jg9",
+      "userId": "id_053616rmv856i7m",
+      "title": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘ...",
+      "mode": "default",
+      "createdAt": "2026-10-14T13:25:41.817Z",
+      "updatedAt": "2026-10-14T13:28:11.559Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "id_90srg02mv857jk2",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_jxng8xsmv857jg9",
+      "role": "user",
+      "content": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে।",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:25:41.954Z",
+      "updatedAt": "2026-10-14T13:25:41.954Z"
+    },
+    {
+      "id": "id_80esrq3mv857rv4",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_jxng8xsmv857jg9",
+      "role": "assistant",
+      "content": "আপনার দিনটি বেশ অর্থবহ এবং উৎপাদনশীল কাটছে শুনে খুব ভালো লাগল! পড়াশোনার পাশাপাশি নিজের প্রজেক্টের কাজ করা সত্যিই আনন্দের। আপনার আজকের এই অনুভূতিগুলো কি আমি ডায়েরিতে লিপিবদ্ধ করে রাখব?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "write",
+        "explanation": "ব্যবহারকারী তার আজকের দিনের কাজের বিবরণ দিয়েছেন যা ডায়েরিতে সংরক্ষণ করার মতো।"
+      },
+      "actionProposal": {
+        "type": "create_diary",
+        "targetName": "Journal: 2026-10-14",
+        "data": {
+          "title": "Journal: 2026-10-14",
+          "content": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে।",
+          "date": "2026-10-14",
+          "mood": "productive",
+          "tags": [
+            "daily-log",
+            "learning",
+            "productivity"
+          ]
+        },
+        "status": "applied"
+      },
+      "createdAt": "2026-10-14T13:25:52.720Z",
+      "updatedAt": "2026-10-14T13:26:13.183Z"
+    },
+    {
+      "id": "id_opj4bfwmv85aio8",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_jxng8xsmv857jg9",
+      "role": "user",
+      "content": "Bondur sate deka holo se ekn golfe kele",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:28:00.776Z",
+      "updatedAt": "2026-10-14T13:28:00.776Z"
+    },
+    {
+      "id": "id_uihw1l7mv85aqzr",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_jxng8xsmv857jg9",
+      "role": "assistant",
+      "content": "শুনতে ভালো লাগছে যে বন্ধুর সাথে দেখা হয়েছে এবং তোমরা গল্ফ খেলেছ! অনেকদিন পর এমন সময় কাটানো নিশ্চয়ই বেশ সতেজ ছিল। তুমি কি এই সুন্দর মুহূর্তটি তোমার আজকের ডায়েরিতে লিখে রাখতে চাও?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "write",
+        "explanation": "ব্যবহারকারী তার দিনের একটি বিশেষ ঘটনা শেয়ার করেছেন যা ডায়েরিতে নথিভুক্ত করা যেতে পারে।"
+      },
+      "actionProposal": {
+        "type": "create_diary",
+        "targetName": "Journal: 2026-10-14",
+        "data": {
+          "title": "Journal: 2026-10-14",
+          "content": "আজ বন্ধুর সাথে দেখা হলো। আমরা একসাথে গল্ফ খেললাম। সময়টা বেশ দারুণ কাটল।",
+          "date": "2026-10-14",
+          "mood": "happy",
+          "tags": [
+            "friends",
+            "golf",
+            "recreation"
+          ]
+        },
+        "status": "pending"
+      },
+      "createdAt": "2026-10-14T13:28:11.559Z",
+      "updatedAt": "2026-10-14T13:28:11.559Z"
+    },
+    {
+      "id": "id_w5sk6icmv85gzja",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "Aj ki korbo bujte parsi na karon eta ekn kivabe korbo jani na. Asolei java best",
+      "attachments": [
+        {
+          "type": "diary",
+          "id": "id_rmeaaa1mv8587ni",
+          "title": "Journal: 2026-10-14"
+        }
+      ],
+      "createdAt": "2026-10-14T13:33:02.566Z",
+      "updatedAt": "2026-10-14T13:33:02.566Z"
+    },
+    {
+      "id": "id_mx31nbqmv85h0xq",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "আপনার দ্বিধা আমি বুঝতে পারছি—নতুন কিছু শুরু করার সময় শুরুতে কিছুটা অগোছালো লাগা খুব স্বাভাবিক। জাভা (Java) শেখার সিদ্ধান্তটি চমৎকার, কারণ এটি প্রোগ্রামিংয়ের ভিত্তি মজবুত করতে দারুণ সাহায্য করে। আপনি যদি আজ থেকে শুরু করতে চান, তবে ছোট কোনো প্রজেক্ট বা কনসেপ্ট দিয়ে শুরু করতে পারেন। আমি আপনার ডায়েরিতে আজকের এই অনুভূতিটি যুক্ত করে দিচ্ছি যাতে আপনি পরে ফিরে এসে আপনার যাত্রার শুরুর মুহূর্তটি দেখতে পান। আপনি কি জাভার নির্দিষ্ট কোনো টপিক নিয়ে আজ কাজ করতে চান?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "write",
+        "explanation": "The user is expressing uncertainty about starting their Java learning journey and recording their thoughts."
+      },
+      "actionProposal": {
+        "type": "update_diary",
+        "targetId": "id_rmeaaa1mv8587ni",
+        "targetName": "Journal: 2026-10-14",
+        "data": {
+          "title": "Journal: 2026-10-14",
+          "content": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে। আজ জাভা (Java) শেখা শুরু করা নিয়ে একটু দ্বিধায় ছিলাম, তবে আমি নিশ্চিত যে জাভা শেখার সিদ্ধান্তটি সঠিক এবং এটি আমার দক্ষতা বাড়াতে সাহায্য করবে।",
+          "date": "2026-10-14",
+          "mood": "contemplative",
+          "tags": [
+            "java",
+            "learning",
+            "growth"
+          ]
+        },
+        "status": "pending"
+      },
+      "createdAt": "2026-10-14T13:33:04.382Z",
+      "updatedAt": "2026-10-14T13:33:04.382Z"
+    },
+    {
+      "id": "id_pntgk4nmv85hpqg",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "Aj ki korbo bujte parsi na karon eta ekn kivabe korbo jani na. Asolei java best",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:33:36.520Z",
+      "updatedAt": "2026-10-14T13:33:36.520Z"
+    },
+    {
+      "id": "id_2kejh37mv85iq2e",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "LifeNote AI is ready. How can I assist with your writing or planning today?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "general",
+        "explanation": "Ready"
+      },
+      "createdAt": "2026-10-14T13:34:23.606Z",
+      "updatedAt": "2026-10-14T13:34:23.606Z"
+    },
+    {
+      "id": "id_ovobnfgmv85j1y0",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "Aj ki korbo bujte parsi na karon eta ekn kivabe korbo jani na. Asolei java best",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:34:39.000Z",
+      "updatedAt": "2026-10-14T13:34:39.000Z"
+    },
+    {
+      "id": "id_34bnbsimv85j81t",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "LifeNote AI is ready. How can I assist with your writing or planning today?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "general",
+        "explanation": "Ready"
+      },
+      "createdAt": "2026-10-14T13:34:46.913Z",
+      "updatedAt": "2026-10-14T13:34:46.913Z"
+    },
+    {
+      "id": "id_2bbzra2mv85qxbd",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "Aj ki korbo bujte parsi na karon eta ekn kivabe korbo jani na. Asolei java best",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:40:46.249Z",
+      "updatedAt": "2026-10-14T13:40:46.249Z"
+    },
+    {
+      "id": "id_b46scxgmv85qzir",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "আপনার দ্বিধা আমি বুঝতে পারছি—জাভা (Java) শেখার সিদ্ধান্তটি চমৎকার, কিন্তু শুরুটা অনেক সময় কঠিন মনে হতে পারে। যেহেতু আপনি আজ কী করবেন তা নিয়ে অনিশ্চিত, তাই আমি আপনার আজকের ডায়েরিতে এই অনুভূতির কথাটি লিখে রাখছি। আপনি যদি চান, আমরা আজ ছোট কোনো 'Hello World' প্রোগ্রাম বা জাভার বেসিক সিনট্যাক্স দিয়ে শুরু করতে পারি। আমি কি আপনার জন্য একটি ছোট লার্নিং প্ল্যান তৈরি করব?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "create_diary",
+        "explanation": "The user is expressing uncertainty about starting their Java learning journey, which is being captured as a diary entry for 2026-10-14."
+      },
+      "actionProposal": {
+        "type": "create_diary",
+        "targetName": "Journal: 2026-10-14",
+        "data": {
+          "title": "Journal: 2026-10-14",
+          "content": "2026-10-14: আজ জাভা (Java) শেখা শুরু করার কথা ভাবছি, কিন্তু কীভাবে শুরু করব তা নিয়ে কিছুটা দ্বিধায় আছি। জাভা সেরা একটি ভাষা, তবুও শুরু করার প্রক্রিয়াটি একটু অগোছালো লাগছে। আজকের দিনটি আমার প্রোগ্রামিং যাত্রার শুরুর মুহূর্ত হয়ে থাকবে।",
+          "date": "2026-10-14",
+          "mood": "thoughtful",
+          "tags": [
+            "Java",
+            "Learning",
+            "Beginning"
+          ]
+        },
+        "status": "applied"
+      },
+      "createdAt": "2026-10-14T13:40:49.107Z",
+      "updatedAt": "2026-10-14T13:40:55.951Z"
+    },
+    {
+      "id": "id_7wxsdswmv85w5hj",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে।",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:44:50.119Z",
+      "updatedAt": "2026-10-14T13:44:50.119Z"
+    },
+    {
+      "id": "id_lz5w1spmv85x0gj",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "LifeNote AI is ready. How can I assist with your writing or planning today?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "general",
+        "explanation": "Ready"
+      },
+      "createdAt": "2026-10-14T13:45:30.259Z",
+      "updatedAt": "2026-10-14T13:45:30.259Z"
+    },
+    {
+      "id": "id_rpa3mnamv85xnxy",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে।",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:46:00.694Z",
+      "updatedAt": "2026-10-14T13:46:00.694Z"
+    },
+    {
+      "id": "id_tns8iobmv85xpox",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "আপনার আজকের দিনটি বেশ গোছানো এবং ইতিবাচক কাটছে জেনে খুব ভালো লাগল! জাভা শেখার অনিশ্চয়তা থেকে শুরু করে প্রজেক্টের কাজ পর্যন্ত—আপনার এই অগ্রগতির কথাগুলো আজকের ডায়েরিতে সুন্দরভাবে গুছিয়ে লিখে দিচ্ছি। আপনি কি জাভার কোন নির্দিষ্ট অংশ নিয়ে আজ কাজ করতে চাইছেন, নাকি অন্য কিছুতে মনোযোগ দেবেন?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "create_diary",
+        "explanation": "User wants to record their daily activities and positive experience in their diary for 2026-10-14."
+      },
+      "actionProposal": {
+        "type": "create_diary",
+        "targetName": "Journal: 2026-10-14",
+        "data": {
+          "title": "Journal: 2026-10-14",
+          "content": "আজকের দিনটা বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে। জাভা (Java) শেখার ব্যাপারে শুরুতে কিছুটা দ্বিধাবোধ করলেও আমি এগিয়ে যাওয়ার চেষ্টা করছি।",
+          "date": "2026-10-14",
+          "mood": "positive",
+          "tags": [
+            "daily-log",
+            "learning",
+            "java",
+            "productivity"
+          ]
+        },
+        "status": "applied"
+      },
+      "createdAt": "2026-10-14T13:46:02.961Z",
+      "updatedAt": "2026-10-14T13:46:13.374Z"
+    },
+    {
+      "id": "id_3mgrimzmv860bzb",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "Tmi kmn aso",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:48:05.159Z",
+      "updatedAt": "2026-10-14T13:48:05.159Z"
+    },
+    {
+      "id": "id_jxp9qnzmv860lql",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "LifeNote AI is ready. How can I assist with your writing or planning today?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "general",
+        "explanation": "Ready"
+      },
+      "createdAt": "2026-10-14T13:48:17.805Z",
+      "updatedAt": "2026-10-14T13:48:17.805Z"
+    },
+    {
+      "id": "id_fdmu22wmv860xoa",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "user",
+      "content": "Tmi kmn aso",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:48:33.274Z",
+      "updatedAt": "2026-10-14T13:48:33.274Z"
+    },
+    {
+      "id": "id_60p9beumv860zax",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_e3xf2gbmv85d48d",
+      "role": "assistant",
+      "content": "আমি বেশ ভালো আছি, ধন্যবাদ! আপনার সাথে কথা বলে এবং আপনার আজকের দিনের সুন্দর অভিজ্ঞতাগুলো শুনে আরও ভালো লাগছে। আপনার প্রজেক্টের কাজ এবং নতুন কিছু শেখার আগ্রহ—সব মিলিয়ে আপনার দিনটি বেশ ফলপ্রসূ মনে হচ্ছে। আপনি আজ আর কী কী করতে চাইছেন বা আপনার মনে আর কোনো চিন্তা আছে কি?",
+      "attachments": [],
+      "detectedIntent": {
+        "type": "general",
+        "explanation": "The user is asking about the assistant's wellbeing in a friendly conversational manner."
+      },
+      "actionProposal": {
+        "type": "create_diary",
+        "targetName": "Journal: 2026-10-14",
+        "data": {
+          "title": "Journal: 2026-10-14",
+          "content": "আজকের দিনটি বেশ ভালো কেটেছে। সকালে ঘুম থেকে উঠে কিছুক্ষণ পড়াশোনা করেছি। এরপর আমার LifeNote AI প্রজেক্টের কাজ করেছি। নতুন কিছু শিখতে পেরে ভালো লাগছে। জাভা শেখার বিষয়টি নিয়ে শুরুতে কিছুটা দ্বিধায় থাকলেও, শিখতে পারার আনন্দই এখন মুখ্য।",
+          "date": "2026-10-14",
+          "mood": "positive",
+          "tags": [
+            "programming",
+            "productivity",
+            "learning"
+          ]
+        },
+        "status": "applied"
+      },
+      "createdAt": "2026-10-14T13:48:35.385Z",
+      "updatedAt": "2026-10-14T13:50:46.554Z"
+    },
+    {
+      "id": "id_557lp2gmv869zwk",
+      "userId": "id_053616rmv856i7m",
+      "chatId": "id_4xouzq5mv869zvs",
+      "role": "user",
+      "content": "Tmi kmn aso",
+      "attachments": [],
+      "createdAt": "2026-10-14T13:55:36.068Z",
+      "updatedAt": "2026-10-14T13:55:36.068Z"
+    }
+  ]
 }

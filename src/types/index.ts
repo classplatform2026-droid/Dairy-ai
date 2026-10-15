@@ -108,7 +108,7 @@ export interface Attachment {
 }
 
 export interface ActionProposal {
-  type: 'create_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content';
+  type: 'create_diary' | 'update_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content';
   targetId?: string;
   targetName?: string;
   data: any;

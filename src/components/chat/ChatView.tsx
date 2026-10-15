@@ -23,6 +23,51 @@ const CHAT_MODES = [
   { id: 'book', label: 'Book Mode', desc: 'Narrative expansion & chapter sculpting' },
 ] as const;
 
+import { getTodayDateString } from '../../utils/date.js';
+
+function deduplicateMessages(messages: Message[]): Message[] {
+  const seen = new Set<string>();
+  const result: Message[] = [];
+  for (const m of messages) {
+    const id = m.id || (m as any)._id;
+    if (id) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+    }
+    result.push(m);
+  }
+  return result;
+}
+
+function getCleanDisplayContent(content: string): string {
+  if (!content) return '';
+  let trimmed = content.trim();
+  if (trimmed.startsWith('```')) {
+    trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
+  if (trimmed.startsWith('{') && (trimmed.includes('"reply"') || trimmed.includes('"message"') || trimmed.includes('"content"') || trimmed.includes('"response"') || trimmed.includes('"text"'))) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const possibleKeys = ['reply', 'response', 'content', 'message', 'text', 'answer'];
+      for (const k of possibleKeys) {
+        if (typeof parsed[k] === 'string' && parsed[k].trim()) {
+          return parsed[k].trim();
+        }
+      }
+    } catch {
+      const m = trimmed.match(/"(?:reply|response|content|message|text)"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+      if (m) {
+        try {
+          return JSON.parse(`"${m[1]}"`);
+        } catch {
+          return m[1];
+        }
+      }
+    }
+  }
+  return content;
+}
+
 interface ChatViewProps {
   initialPrompt?: string;
   initialMode?: string;
@@ -105,9 +150,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
     try {
       setLoading(true);
       const res = await api.chats.get(chatId);
-      setActiveChat(res.chat);
-      if (res.chat?.mode) {
-        setSelectedMode(res.chat.mode as any);
+      if (res.chat) {
+        setActiveChat({
+          ...res.chat,
+          messages: deduplicateMessages(res.chat.messages || []),
+        });
+        if (res.chat.mode) {
+          setSelectedMode(res.chat.mode as any);
+        }
       }
       if (onChatSelected) {
         onChatSelected(chatId);
@@ -164,7 +214,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             if (!prev) return null;
             return {
               ...prev,
-              messages: [...(prev.messages || []), res.userMessage, res.assistantMessage],
+              messages: deduplicateMessages([...(prev.messages || []), res.userMessage, res.assistantMessage]),
             };
           });
           window.dispatchEvent(new CustomEvent('lifenote:chats-changed'));
@@ -185,7 +235,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
 
     if (selectedChatId) {
-      loadChatDetail(selectedChatId);
+      const currentId = activeChat?.id || (activeChat as any)?._id;
+      if (currentId !== selectedChatId) {
+        loadChatDetail(selectedChatId);
+      }
       return;
     }
 
@@ -273,6 +326,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const payload = {
       content: text,
       attachments: attachments.length > 0 ? attachments : undefined,
+      clientDate: getTodayDateString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
 
     setSending(true);
@@ -286,7 +341,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         const msgs = prev.messages || [];
         return {
           ...prev,
-          messages: [...msgs, res.userMessage, res.assistantMessage],
+          messages: deduplicateMessages([...msgs, res.userMessage, res.assistantMessage]),
         };
       });
       window.dispatchEvent(new CustomEvent('lifenote:chats-changed'));
@@ -374,7 +429,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const chatId = activeChat.id || (activeChat as any)._id;
 
     try {
-      const res = await api.chats.applyAction(chatId, proposalModal.messageId, proposalModal.editableData);
+      const res = await api.chats.applyAction(chatId, proposalModal.messageId, proposalModal.editableData, getTodayDateString());
       setApplySuccessNotice(res.message);
 
       // Update message in state to status 'applied'
@@ -544,13 +599,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
         ) : (
           /* Message Thread (Claude AI Typography & Margins) */
           <div className="max-w-3xl mx-auto space-y-7 pb-6">
-            {activeChat!.messages!.map((msg) => {
+            {activeChat!.messages!.map((msg, index) => {
               const isUser = msg.role === 'user';
-              const msgId = msg.id || (msg as any)._id;
+              const msgId = msg.id || (msg as any)._id || 'msg';
+              const uniqueKey = `${msgId}-${index}`;
 
               return (
                 <div
-                  key={msgId}
+                  key={uniqueKey}
                   className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} group`}
                 >
                   {/* User / Assistant Tag */}
@@ -578,9 +634,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mb-2 pb-2 border-b border-neutral-200/60 flex items-center gap-1.5 flex-wrap">
                         <Paperclip className="w-3 h-3 text-neutral-400" />
-                        {msg.attachments.map(att => (
+                        {msg.attachments.map((att, attIdx) => (
                           <span
-                            key={att.id}
+                            key={att.id ? `${att.id}-${attIdx}` : `att-${attIdx}`}
                             className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 truncate max-w-[160px]"
                           >
                             {att.type.toUpperCase()}: {att.title}
@@ -591,7 +647,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     {/* Content with Claude-style readable typography */}
                     <div className="whitespace-pre-wrap font-sans text-sm sm:text-[15px] leading-relaxed text-neutral-800">
-                      {msg.content}
+                      {getCleanDisplayContent(msg.content)}
                     </div>
 
                     {/* Action Proposal Card (Approval Flow) */}
@@ -715,9 +771,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {attachments.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap px-2">
               <span className="text-[10px] text-neutral-400 font-mono uppercase tracking-wider">Context:</span>
-              {attachments.map(att => (
+              {attachments.map((att, attIdx) => (
                 <span
-                  key={att.id}
+                  key={att.id ? `${att.id}-${attIdx}` : `att-${attIdx}`}
                   className="inline-flex items-center gap-1 text-[11px] bg-neutral-100 text-neutral-800 px-2.5 py-0.5 rounded-full font-medium"
                 >
                   <span>{att.type}: {att.title}</span>
@@ -987,19 +1043,50 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
             {/* Editable Fields based on proposal type */}
             <div className="space-y-3">
-              {proposalModal.proposal.type === 'create_diary' && (
+              {(proposalModal.proposal.type === 'create_diary' || proposalModal.proposal.type === 'update_diary') && (
                 <>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 mb-1">Entry Title</label>
-                    <input
-                      type="text"
-                      value={proposalModal.editableData.title || ''}
-                      onChange={(e) => setProposalModal({
-                        ...proposalModal,
-                        editableData: { ...proposalModal.editableData, title: e.target.value }
-                      })}
-                      className="w-full px-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-400"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">Calendar Date</label>
+                      <input
+                        type="date"
+                        value={
+                          proposalModal.editableData.date && !/202[0-5]/.test(proposalModal.editableData.date) && !proposalModal.editableData.date.includes('YYYY')
+                            ? proposalModal.editableData.date
+                            : getTodayDateString()
+                        }
+                        onChange={(e) => {
+                          const newDate = e.target.value;
+                          setProposalModal({
+                            ...proposalModal,
+                            editableData: {
+                              ...proposalModal.editableData,
+                              date: newDate,
+                              title: (proposalModal.editableData.title || '').startsWith('Journal:') || /202[0-5]/.test(proposalModal.editableData.title || '')
+                                ? `Journal: ${newDate}`
+                                : proposalModal.editableData.title,
+                            }
+                          });
+                        }}
+                        className="w-full px-3 py-1.5 text-xs font-mono border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">Entry Title</label>
+                      <input
+                        type="text"
+                        value={
+                          /202[0-5]/.test(proposalModal.editableData.title || '')
+                            ? (proposalModal.editableData.title || '').replace(/202[0-5]-\d{2}-\d{2}/g, getTodayDateString()).replace(/202[0-5]/g, getTodayDateString().split('-')[0])
+                            : proposalModal.editableData.title || ''
+                        }
+                        onChange={(e) => setProposalModal({
+                          ...proposalModal,
+                          editableData: { ...proposalModal.editableData, title: e.target.value }
+                        })}
+                        className="w-full px-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-neutral-700 mb-1">Content</label>

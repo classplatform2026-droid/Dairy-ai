@@ -165,10 +165,10 @@ export const api = {
       request<{ chat: any }>(`/chats/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/chats/${id}`, { method: 'DELETE' }),
-    sendMessage: (id: string, data: { content: string; attachments?: any[]; skillId?: string }) =>
+    sendMessage: (id: string, data: { content: string; attachments?: any[]; skillId?: string; clientDate?: string; timezone?: string }) =>
       request<{ userMessage: any; assistantMessage: any }>(`/chats/${id}/messages`, { method: 'POST', body: JSON.stringify(data) }),
-    applyAction: (chatId: string, messageId: string, actionData?: any) =>
-      request<{ success: boolean; message: string; createdResource: any }>(`/chats/${chatId}/messages/${messageId}/apply-action`, { method: 'POST', body: JSON.stringify({ actionData }) }),
+    applyAction: (chatId: string, messageId: string, actionData?: any, clientDate?: string) =>
+      request<{ success: boolean; message: string; createdResource: any }>(`/chats/${chatId}/messages/${messageId}/apply-action`, { method: 'POST', body: JSON.stringify({ actionData, clientDate }) }),
   },
 
   // AI Direct

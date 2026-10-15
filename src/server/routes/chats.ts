@@ -115,10 +115,16 @@ router.post('/:id/messages', async (req: AuthenticatedRequest, res: Response): P
     // 2. Build context from attachments & linked resources
     let contextSnippets: string[] = [];
 
+    const clientDate = (req.body.clientDate && typeof req.body.clientDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.clientDate))
+      ? req.body.clientDate
+      : new Date().toISOString().split('T')[0];
+    const clientTimezone = req.body.timezone || req.body.clientTimezone;
+
     // Auto-attach current day's diary entry if in 'diary' mode or discussing diary
     let targetDiary: any = null;
     const isDiaryMode = chat.mode === 'diary' || (Array.isArray(attachments) && attachments.some(a => a.type === 'diary'));
-      const todayStr = new Date().toISOString().split('T')[0];
+    if (isDiaryMode) {
+      const todayStr = clientDate;
       if (chat.linkedResourceId) {
         targetDiary = await db.diaries.findById(req.user!.id, chat.linkedResourceId);
       }
@@ -202,14 +208,39 @@ No diary page written yet for today. When the user writes their first message fo
       attachments: attachments || [],
       customApiKey: customKey,
       model,
+      clientDate,
+      clientTimezone,
     });
 
-    // 4. Save assistant response
+    // 4. Save assistant response with strict JSON unwrapping safeguard
+    let replyContent = aiResult.reply || '';
+    let finalProposal = aiResult.actionProposal;
+    let finalIntent = aiResult.detectedIntent;
+    if (typeof replyContent === 'string' && replyContent.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(replyContent.trim());
+        if (parsed.reply && typeof parsed.reply === 'string') {
+          replyContent = parsed.reply;
+          if (parsed.actionProposal && !finalProposal) finalProposal = parsed.actionProposal;
+          if (parsed.detectedIntent && !finalIntent) finalIntent = parsed.detectedIntent;
+        }
+      } catch (_) {
+        const m = replyContent.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+        if (m) {
+          try {
+            replyContent = JSON.parse(`"${m[1]}"`);
+          } catch {
+            replyContent = m[1];
+          }
+        }
+      }
+    }
+
     const assistantMessage = await db.chats.createMessage(req.user!.id, req.params.id, {
       role: 'assistant',
-      content: aiResult.reply,
-      detectedIntent: aiResult.detectedIntent,
-      actionProposal: aiResult.actionProposal,
+      content: replyContent,
+      detectedIntent: finalIntent,
+      actionProposal: finalProposal,
     });
 
     res.status(201).json({
@@ -243,7 +274,13 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
     let createdResource: any = null;
 
     if (proposal.type === 'create_diary' || proposal.type === 'update_diary') {
-      const targetDate = dataToUse.date || new Date().toISOString().split('T')[0];
+      const todayStr = (req.body.clientDate && typeof req.body.clientDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.clientDate))
+        ? req.body.clientDate
+        : new Date().toISOString().split('T')[0];
+      let targetDate = dataToUse.date || todayStr;
+      if (/202[0-5]/.test(targetDate) || targetDate.includes('YYYY')) {
+        targetDate = todayStr;
+      }
       const userDiaries = await db.diaries.findMany(req.user!.id);
       let existingForDate = proposal.targetId
         ? await db.diaries.findById(req.user!.id, proposal.targetId)

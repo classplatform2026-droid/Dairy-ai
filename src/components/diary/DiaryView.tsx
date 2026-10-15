@@ -470,10 +470,38 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
         <div className="border border-neutral-200 rounded-3xl bg-white p-6 sm:p-10 shadow-xs space-y-6">
           {/* Top Metadata Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-100">
-            <div className="flex items-center gap-2.5">
-              <span className="px-3 py-1 rounded-full bg-neutral-100 text-neutral-800 text-xs font-mono font-medium">
-                {formatShortDate(selectedDate)}
-              </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-800 text-xs font-mono font-medium">
+                <Calendar className="w-3.5 h-3.5 text-neutral-500" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    const newD = normalizeDate(e.target.value);
+                    setSelectedDate(newD);
+                    if (title.startsWith('Journal:') || /202[0-5]/.test(title)) {
+                      setTitle(`Journal: ${newD}`);
+                    }
+                  }}
+                  className="bg-transparent text-neutral-900 font-mono text-xs focus:outline-none cursor-pointer"
+                  title="Change entry date"
+                />
+              </div>
+              {!isToday(selectedDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(todayStr);
+                    if (title.startsWith('Journal:') || /202[0-5]/.test(title)) {
+                      setTitle(`Journal: ${todayStr}`);
+                    }
+                  }}
+                  className="text-[11px] font-semibold text-neutral-600 hover:text-black bg-neutral-100 hover:bg-neutral-200 px-2.5 py-1 rounded-full transition-colors cursor-pointer"
+                  title="Set date to Today"
+                >
+                  Set to Today
+                </button>
+              )}
               <span className="text-xs text-neutral-400 font-mono">
                 {wordCount} {wordCount === 1 ? 'word' : 'words'}
               </span>
