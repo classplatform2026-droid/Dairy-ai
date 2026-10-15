@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { db } from '../db/connection.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
-import { transformText } from '../services/ai.js';
+import { transformText, synthesizeDiaryPage } from '../services/ai.js';
 import { decryptSecret } from '../utils/crypto.js';
 
 const router = Router();
@@ -39,12 +39,29 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
 
     if (existing) {
       const existingId = existing.id || (existing as any)._id;
+      const prevContent = (existing.content || '').trim();
+      const newContent = (content || '').trim();
+
+      let finalContent = newContent;
+      // PRESERVE PREVIOUS TEXT: If text already exists for this date, append new thoughts so earlier writing is never lost
+      if (prevContent && newContent) {
+        if (!newContent.includes(prevContent) && !prevContent.includes(newContent)) {
+          finalContent = `${prevContent}\n\n${newContent}`;
+        } else if (prevContent.includes(newContent)) {
+          finalContent = prevContent;
+        }
+      } else if (prevContent && !newContent) {
+        finalContent = prevContent;
+      }
+
       const updated = await db.diaries.update(req.user!.id, existingId, {
-        title: title || existing.title,
-        content: content !== undefined ? content : existing.content,
+        title: (existing.title && !existing.title.startsWith('Journal: 202'))
+          ? existing.title
+          : (title || existing.title),
+        content: finalContent,
         mood: mood || existing.mood,
         weather: weather || existing.weather,
-        tags: Array.isArray(tags) ? tags : existing.tags,
+        tags: Array.isArray(tags) ? Array.from(new Set([...(existing.tags || []), ...tags])) : existing.tags,
         location: location !== undefined ? location : existing.location,
         favorite: favorite !== undefined ? !!favorite : existing.favorite,
         date: targetDate,
@@ -162,6 +179,50 @@ router.post('/:id/ai-refine', async (req: AuthenticatedRequest, res: Response): 
   }
 });
 
+// POST /api/diaries/synthesize-page
+// Synthesizes the entire day's text into one cohesive reflection, detecting title and mood
+router.post('/synthesize-page', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { content, title, date, id, autoSave } = req.body;
+    if (!content || !content.trim()) {
+      res.status(400).json({ error: 'Diary content is required to synthesize.' });
+      return;
+    }
+
+    const targetDate = date ? String(date).split('T')[0].trim() : new Date().toISOString().split('T')[0];
+    const user = await db.users.findById(req.user!.id);
+    const customKey = user?.customApiKeyEncrypted ? decryptSecret(user.customApiKeyEncrypted) : undefined;
+    const model = user?.selectedModel || 'gemini-3.8-flash';
+
+    const result = await synthesizeDiaryPage({
+      content,
+      title,
+      date: targetDate,
+      customApiKey: customKey,
+      model,
+    });
+
+    let savedEntry: any = null;
+    if (autoSave && id) {
+      savedEntry = await db.diaries.update(req.user!.id, id, {
+        content: result.unifiedContent,
+        title: result.title,
+        mood: result.mood,
+      });
+    }
+
+    res.json({
+      unifiedContent: result.unifiedContent,
+      title: result.title,
+      mood: result.mood,
+      savedEntry,
+    });
+  } catch (err: any) {
+    console.error('Synthesis route error:', err);
+    res.status(500).json({ error: err.message || 'Failed to synthesize page.' });
+  }
+});
+
 // GET /api/diaries/by-date/:date
 router.get('/by-date/:date', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -244,9 +305,17 @@ TASK:
 
     if (existing) {
       const existingId = existing.id || (existing as any)._id;
+      const prev = (existing.content || '').trim();
+      let merged = finalContent;
+      if (prev && finalContent && !finalContent.includes(prev) && !prev.includes(finalContent)) {
+        merged = `${prev}\n\n${finalContent}`;
+      } else if (prev && !finalContent) {
+        merged = prev;
+      }
+
       savedEntry = await db.diaries.update(req.user!.id, existingId, {
-        content: finalContent,
-        title: existing.title && existing.title !== `Journal: ${targetDate}` ? existing.title : finalTitle,
+        content: merged,
+        title: existing.title && !existing.title.startsWith('Journal: 202') ? existing.title : finalTitle,
         mood: finalMood,
         date: targetDate,
       });

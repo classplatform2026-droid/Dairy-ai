@@ -10,7 +10,7 @@ router.use(requireAuth);
 // POST /api/ai/transform-text
 router.post('/transform-text', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { text, action, tone } = req.body;
+    const { text, action, tone, customPrompt } = req.body;
     if (!text) {
       res.status(400).json({ error: 'Text is required.' });
       return;
@@ -24,6 +24,7 @@ router.post('/transform-text', async (req: AuthenticatedRequest, res: Response):
       text,
       action: action || 'improve',
       tone,
+      customPrompt,
       customApiKey: customKey,
       model,
     });

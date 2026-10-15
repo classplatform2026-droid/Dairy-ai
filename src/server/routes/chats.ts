@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { db } from '../db/connection.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
-import { chatWithContext } from '../services/ai.js';
+import { chatWithContext, craftBeautifulJournalEntry } from '../services/ai.js';
 import { decryptSecret } from '../utils/crypto.js';
 
 const router = Router();
@@ -33,6 +33,53 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
   }
 });
 
+function sanitizeMessageProposal(msg: any, prevUserContent?: string): any {
+  if (!msg || !msg.actionProposal) return msg;
+  const p = { ...msg.actionProposal };
+  let rawType = String(p.type || '').toLowerCase();
+  if (
+    rawType.includes('diary') ||
+    rawType.includes('journal') ||
+    rawType.includes('|') ||
+    !['create_diary', 'update_diary', 'update_plan', 'add_chapter', 'create_skill'].includes(rawType)
+  ) {
+    if (rawType.includes('plan')) {
+      rawType = 'update_plan';
+    } else if (rawType.includes('chapter') || rawType.includes('book')) {
+      rawType = 'add_chapter';
+    } else if (rawType.includes('skill')) {
+      rawType = 'create_skill';
+    } else {
+      rawType = 'create_diary';
+    }
+  }
+  p.type = rawType;
+  if (!p.data || typeof p.data !== 'object') p.data = {};
+
+  if (p.type === 'create_diary' || p.type === 'update_diary') {
+    let content = (p.data.content || p.data.text || p.data.entry || p.data.body || p.data.notes || '').trim();
+    const isRawOrBrief =
+      !content ||
+      (prevUserContent && content.toLowerCase() === prevUserContent.trim().toLowerCase()) ||
+      (prevUserContent && content.length <= prevUserContent.length + 10 && content.includes(prevUserContent)) ||
+      content.split(/\s+/).length < 8;
+
+    if (isRawOrBrief) {
+      const raw = prevUserContent || content || (typeof msg.content === 'string' ? msg.content : '') || '';
+      content = craftBeautifulJournalEntry(raw);
+    }
+    p.data.content = content;
+    const today = new Date().toISOString().split('T')[0];
+    p.data.date = p.data.date || today;
+    const isBengali = /[\u0980-\u09FF]/.test(content);
+    if (!p.data.title || p.data.title.startsWith('Journal: 202')) {
+      p.data.title = isBengali ? 'আত্মোপলব্ধি ও ভাবনার নতুন দিগন্ত' : `Reflections: ${p.data.date}`;
+    }
+    p.targetName = p.targetName || p.data.title;
+  }
+  return { ...msg, actionProposal: p };
+}
+
 // GET /api/chats/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -41,6 +88,19 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
       res.status(404).json({ error: 'Conversation not found.' });
       return;
     }
+
+    // Sanitize any previously corrupted message proposals
+    if (Array.isArray(chat.messages)) {
+      let lastUserText = '';
+      chat.messages = chat.messages.map((m: any) => {
+        if (m.role === 'user') {
+          lastUserText = m.content || '';
+          return m;
+        }
+        return sanitizeMessageProposal(m, lastUserText);
+      });
+    }
+
     res.json({ chat });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch conversation.' });
@@ -236,6 +296,9 @@ No diary page written yet for today. When the user writes their first message fo
       }
     }
 
+    const sanitizedObj = sanitizeMessageProposal({ content: replyContent, actionProposal: finalProposal }, content);
+    finalProposal = sanitizedObj.actionProposal;
+
     const assistantMessage = await db.chats.createMessage(req.user!.id, req.params.id, {
       role: 'assistant',
       content: replyContent,
@@ -273,7 +336,13 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
     const dataToUse = actionData || proposal.data;
     let createdResource: any = null;
 
-    if (proposal.type === 'create_diary' || proposal.type === 'update_diary') {
+    let pType = String(proposal.type || '').toLowerCase();
+    const isDiaryAction =
+      pType.includes('diary') ||
+      pType.includes('journal') ||
+      !['update_plan', 'add_chapter', 'create_skill'].includes(pType);
+
+    if (isDiaryAction) {
       const todayStr = (req.body.clientDate && typeof req.body.clientDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.clientDate))
         ? req.body.clientDate
         : new Date().toISOString().split('T')[0];
@@ -290,11 +359,29 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
         existingForDate = userDiaries.find((d: any) => d.date === targetDate);
       }
 
+      const contentToSave = (dataToUse.content || dataToUse.text || dataToUse.entry || dataToUse.body || '').trim() || (typeof message.content === 'string' ? message.content : '');
+
       if (existingForDate) {
         const idToUpdate = existingForDate.id || (existingForDate as any)._id;
+        const prevContent = (existingForDate.content || '').trim();
+        let finalContent = contentToSave.trim();
+
+        // PRESERVE PREVIOUS TEXT: If text already exists for this date, append new thoughts so earlier writing is never lost
+        if (prevContent && finalContent) {
+          if (!finalContent.includes(prevContent) && !prevContent.includes(finalContent)) {
+            finalContent = `${prevContent}\n\n${finalContent}`;
+          } else if (prevContent.includes(finalContent)) {
+            finalContent = prevContent;
+          }
+        } else if (prevContent && !finalContent) {
+          finalContent = prevContent;
+        }
+
         createdResource = await db.diaries.update(req.user!.id, idToUpdate, {
-          title: dataToUse.title || existingForDate.title || `Journal: ${targetDate}`,
-          content: dataToUse.content || '',
+          title: existingForDate.title && !existingForDate.title.startsWith('Journal: 202')
+            ? existingForDate.title
+            : (dataToUse.title || existingForDate.title || `Journal: ${targetDate}`),
+          content: finalContent,
           mood: dataToUse.mood || existingForDate.mood || 'thoughtful',
           weather: dataToUse.weather || existingForDate.weather || 'sunny',
           date: targetDate,
@@ -302,7 +389,7 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
       } else {
         createdResource = await db.diaries.create(req.user!.id, {
           title: dataToUse.title || `Journal: ${targetDate}`,
-          content: dataToUse.content || '',
+          content: contentToSave,
           mood: dataToUse.mood || 'thoughtful',
           weather: dataToUse.weather || 'sunny',
           tags: dataToUse.tags || ['daily-journal'],

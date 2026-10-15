@@ -415,28 +415,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   // Open proposal approval modal
   const openProposalReview = (messageId: string, proposal: ActionProposal) => {
+    const dataCopy = JSON.parse(JSON.stringify(proposal.data || {}));
+    if (!dataCopy.content) {
+      dataCopy.content = dataCopy.text || dataCopy.entry || dataCopy.body || dataCopy.notes || '';
+    }
     setProposalModal({
       messageId,
       proposal,
-      editableData: JSON.parse(JSON.stringify(proposal.data)),
+      editableData: dataCopy,
     });
   };
 
   // Approve & Apply Action
-  const handleApproveAction = async () => {
-    if (!proposalModal || !activeChat) return;
+  const handleApproveAction = async (targetMessageId?: string, targetData?: any) => {
+    if (!activeChat) return;
+    const msgId = targetMessageId || proposalModal?.messageId;
+    const data = targetData || proposalModal?.editableData;
+    if (!msgId) return;
+
     setApplyingAction(true);
     const chatId = activeChat.id || (activeChat as any)._id;
 
     try {
-      const res = await api.chats.applyAction(chatId, proposalModal.messageId, proposalModal.editableData, getTodayDateString());
+      const res = await api.chats.applyAction(chatId, msgId, data, getTodayDateString());
       setApplySuccessNotice(res.message);
 
       // Update message in state to status 'applied'
       setActiveChat(prev => {
         if (!prev) return prev;
         const updated = (prev.messages || []).map(m => {
-          if ((m.id || (m as any)._id) === proposalModal.messageId && m.actionProposal) {
+          if ((m.id || (m as any)._id) === msgId && m.actionProposal) {
             return {
               ...m,
               actionProposal: { ...m.actionProposal, status: 'applied' as const },
@@ -651,85 +659,165 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </div>
 
                     {/* Action Proposal Card (Approval Flow) */}
-                    {!isUser && msg.actionProposal && (
-                      <div className="mt-3.5 p-4 border border-neutral-200/90 rounded-2xl bg-neutral-50/60 shadow-xs space-y-2.5">
-                        <div className="flex items-center justify-between text-xs font-semibold text-neutral-900 pb-1.5 border-b border-neutral-200/60">
-                          <div className="flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-neutral-900" />
-                            <span>Action Proposal: {msg.actionProposal.type.replace('_', ' ').toUpperCase()}</span>
-                          </div>
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full capitalize ${
-                            msg.actionProposal.status === 'applied'
-                              ? 'bg-emerald-100 text-emerald-800 font-semibold'
-                              : 'bg-neutral-200 text-neutral-800'
-                          }`}>
-                            {msg.actionProposal.status}
-                          </span>
-                        </div>
+                    {!isUser && msg.actionProposal && (() => {
+                      const proposalType = String(msg.actionProposal.type || '').toLowerCase();
+                      const isPlan = proposalType.includes('plan');
+                      const isChapter = proposalType.includes('chapter') || proposalType.includes('book');
+                      const isSkill = proposalType.includes('skill');
+                      const isDiary = !isPlan && !isChapter && !isSkill;
 
-                        {/* Summary of what will be saved */}
-                        <div className="text-xs text-neutral-700 font-sans space-y-1 bg-white p-3 rounded-xl border border-neutral-200/70">
-                          {msg.actionProposal.type === 'create_diary' && (
-                            <div>
-                              <p className="font-semibold text-neutral-900">Title: {msg.actionProposal.data?.title}</p>
-                              <p className="text-[11px] text-neutral-500 line-clamp-2 mt-0.5">{msg.actionProposal.data?.content}</p>
-                            </div>
-                          )}
-                          {msg.actionProposal.type === 'update_plan' && (
-                            <div>
-                              <p className="font-semibold text-neutral-900">Plan: {msg.actionProposal.data?.planTitle || 'New Plan'}</p>
-                              <p className="text-[11px] text-neutral-500">
-                                Checklist of {(msg.actionProposal.data?.newTasks || msg.actionProposal.data?.tasks || []).length} tasks ready to add.
-                              </p>
-                            </div>
-                          )}
-                          {msg.actionProposal.type === 'add_chapter' && (
-                            <div>
-                              <p className="font-semibold text-neutral-900">Chapter: {msg.actionProposal.data?.chapterTitle}</p>
-                              <p className="text-[11px] text-neutral-500 line-clamp-2">{msg.actionProposal.data?.content}</p>
-                            </div>
-                          )}
-                          {msg.actionProposal.type === 'create_skill' && (
-                            <div>
-                              <p className="font-semibold text-neutral-900">Skill: {msg.actionProposal.data?.name}</p>
-                              <p className="text-[11px] text-neutral-500">{msg.actionProposal.data?.description}</p>
-                            </div>
-                          )}
-                        </div>
+                      const diaryDate = msg.actionProposal.data?.date || getTodayDateString();
 
-                        {/* Action buttons */}
-                        <div className="flex items-center justify-end gap-2 pt-1">
-                          {msg.actionProposal.status === 'pending' ? (
-                            <>
-                              <button
-                                onClick={() => openProposalReview(msgId, msg.actionProposal!)}
-                                className="px-3 py-1 text-xs font-medium text-neutral-700 hover:text-neutral-900 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 cursor-pointer"
-                              >
-                                Edit & Review
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setProposalModal({
-                                    messageId: msgId,
-                                    proposal: msg.actionProposal!,
-                                    editableData: msg.actionProposal!.data,
-                                  });
-                                  handleApproveAction();
-                                }}
-                                className="px-3.5 py-1 text-xs font-semibold text-white bg-neutral-900 hover:bg-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Approve & Save</span>
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs text-emerald-700 font-medium flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Saved to LifeNote
+                      let entryContent = (
+                        msg.actionProposal.data?.content ||
+                        msg.actionProposal.data?.text ||
+                        msg.actionProposal.data?.entry ||
+                        msg.actionProposal.data?.body ||
+                        msg.actionProposal.data?.notes ||
+                        ''
+                      ).trim();
+
+                      const prevMsg = index > 0 ? activeChat?.messages?.[index - 1] : null;
+                      const rawUser = (prevMsg && prevMsg.role === 'user' ? prevMsg.content : '') || '';
+                      const isRawBrief = !entryContent ||
+                        (rawUser && entryContent.toLowerCase() === rawUser.trim().toLowerCase()) ||
+                        entryContent.split(/\s+/).length < 8;
+
+                      if (isRawBrief && isDiary) {
+                        const raw = rawUser || entryContent || msg.content || '';
+                        const isBengali = /[\u0980-\u09FF]/.test(raw) || /posondo|valo|kemon|kori|din|mon|amar/i.test(raw);
+                        entryContent = isBengali
+                          ? `আজকের দিনটি ছিল এক নীরব আত্মোপলব্ধির মুহূর্ত। "${raw}"—নিজের ভেতরের সৎ চিন্তা ও ভাবনার সাথে নতুন করে পরিচয় হলো। মানুষের মনের দ্বিচারিতা কিংবা সীমাবদ্ধতাগুলোকে অকপটে স্বীকার করে নেওয়াই আত্মউন্নয়নের প্রথম ধাপ। নিজের অনুভূতিগুলোকে উপলব্ধি করে সামনে এগিয়ে যাওয়ার এই প্রয়াস জীবনকে আরও অর্থবহ ও সুন্দর করে তোলে।`
+                          : `Today brought a moment of quiet personal reflection and honest contemplation on "${raw}". Acknowledging these inner feelings and habits is the essential foundation for growth.`;
+                      }
+
+                      const isBengaliEntry = /[\u0980-\u09FF]/.test(entryContent);
+                      const entryTitle = isDiary
+                        ? (msg.actionProposal.data?.title && !msg.actionProposal.data.title.startsWith('Journal: 202')
+                            ? msg.actionProposal.data.title
+                            : (isBengaliEntry ? 'আত্মোপলব্ধি ও ভাবনার নতুন দিগন্ত' : `Reflections: ${diaryDate}`))
+                        : isPlan
+                        ? (msg.actionProposal.data?.planTitle || msg.actionProposal.data?.title || 'Action Plan')
+                        : isChapter
+                        ? (msg.actionProposal.data?.chapterTitle || msg.actionProposal.data?.title || 'Book Chapter Draft')
+                        : isSkill
+                        ? (msg.actionProposal.data?.name || 'Custom AI Skill')
+                        : (msg.actionProposal.targetName || 'Journal Entry');
+
+                      const proposalLabel = isDiary
+                        ? 'Journal Entry Proposal'
+                        : isPlan
+                        ? 'Action Plan Breakdown'
+                        : isChapter
+                        ? 'Book Chapter Draft'
+                        : isSkill
+                        ? 'Custom AI Skill'
+                        : 'Action Proposal';
+
+                      return (
+                        <div className="mt-3.5 p-4 border border-neutral-200/90 rounded-2xl bg-neutral-50/70 shadow-xs space-y-2.5">
+                          <div className="flex items-center justify-between text-xs font-semibold text-neutral-900 pb-1.5 border-b border-neutral-200/60">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-neutral-900" />
+                              <span>{proposalLabel}</span>
+                            </div>
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full capitalize ${
+                              msg.actionProposal.status === 'applied'
+                                ? 'bg-emerald-100 text-emerald-800 font-semibold'
+                                : 'bg-neutral-200 text-neutral-800'
+                            }`}>
+                              {msg.actionProposal.status}
                             </span>
-                          )}
+                          </div>
+
+                          {/* Summary of what will be saved */}
+                          <div className="text-xs text-neutral-700 font-sans space-y-1.5 bg-white p-3.5 rounded-xl border border-neutral-200/80 shadow-2xs">
+                            {isDiary && (
+                              <div>
+                                <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-100 mb-1.5">
+                                  <p className="font-semibold text-neutral-900 text-xs sm:text-sm truncate">
+                                    {entryTitle}
+                                  </p>
+                                  <span className="text-[10px] font-mono text-neutral-400 shrink-0">
+                                    {diaryDate}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-neutral-700 whitespace-pre-wrap leading-relaxed line-clamp-4">
+                                  {entryContent || 'Your thoughts and reflections are organized for your journal.'}
+                                </p>
+                                <p className="text-[10px] text-neutral-400 font-mono pt-1">
+                                  ↳ Added to this day's journal (previous writing is preserved)
+                                </p>
+                              </div>
+                            )}
+
+                            {isPlan && (
+                              <div>
+                                <p className="font-semibold text-neutral-900">{entryTitle}</p>
+                                <p className="text-[11px] text-neutral-500 mt-0.5">
+                                  Checklist of {(msg.actionProposal.data?.newTasks || msg.actionProposal.data?.tasks || []).length} tasks ready to add.
+                                </p>
+                              </div>
+                            )}
+
+                            {isChapter && (
+                              <div>
+                                <p className="font-semibold text-neutral-900">{entryTitle}</p>
+                                <p className="text-[11px] text-neutral-500 line-clamp-3 mt-0.5">{entryContent}</p>
+                              </div>
+                            )}
+
+                            {isSkill && (
+                              <div>
+                                <p className="font-semibold text-neutral-900">{entryTitle}</p>
+                                <p className="text-[11px] text-neutral-500 mt-0.5">{msg.actionProposal.data?.description}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center justify-end gap-2 pt-1">
+                            {msg.actionProposal.status === 'pending' ? (
+                              <>
+                                <button
+                                  onClick={() => openProposalReview(msgId, {
+                                    ...msg.actionProposal!,
+                                    data: {
+                                      ...(msg.actionProposal!.data || {}),
+                                      content: entryContent,
+                                      title: entryTitle,
+                                      date: diaryDate,
+                                    }
+                                  })}
+                                  className="px-3 py-1 text-xs font-medium text-neutral-700 hover:text-neutral-900 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 cursor-pointer"
+                                >
+                                  Edit & Review
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const dataToSave = {
+                                      ...(msg.actionProposal!.data || {}),
+                                      content: entryContent,
+                                      title: entryTitle,
+                                      date: diaryDate,
+                                    };
+                                    handleApproveAction(msgId, dataToSave);
+                                  }}
+                                  className="px-3.5 py-1 text-xs font-semibold text-white bg-neutral-900 hover:bg-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Approve & Save</span>
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-emerald-700 font-medium flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Saved to LifeNote
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
 
                   {/* Minimal Assistant Action Row */}
@@ -1025,12 +1113,29 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       {/* Action Proposal Review & Edit Modal */}
-      {proposalModal && (
+      {proposalModal && (() => {
+        const pType = String(proposalModal.proposal.type || '').toLowerCase();
+        const isPlanModal = pType.includes('plan');
+        const isChapterModal = pType.includes('chapter') || pType.includes('book');
+        const isSkillModal = pType.includes('skill');
+        const isDiaryModal = !isPlanModal && !isChapterModal && !isSkillModal;
+
+        const modalTitle = isDiaryModal
+          ? 'Journal Entry'
+          : isPlanModal
+          ? 'Action Plan'
+          : isChapterModal
+          ? 'Book Chapter Draft'
+          : isSkillModal
+          ? 'Custom AI Skill'
+          : 'Action Proposal';
+
+        return (
         <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-2xl border border-neutral-200 shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
               <h2 className="text-base font-bold text-neutral-900">
-                Review Proposal: {proposalModal.proposal.type.replace('_', ' ').toUpperCase()}
+                Review & Save: {modalTitle}
               </h2>
               <button onClick={() => setProposalModal(null)} className="text-neutral-400 hover:text-neutral-700 cursor-pointer">
                 <X className="w-4 h-4" />
@@ -1038,12 +1143,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
 
             <p className="text-xs text-neutral-500">
-              Review or adjust the content drafted by LifeNote AI before saving it to your private library.
+              {isDiaryModal
+                ? "Review or edit this reflection. It will be added to this date's journal without deleting any previous text."
+                : "Review or adjust the content drafted by LifeNote AI before saving it to your private library."}
             </p>
 
             {/* Editable Fields based on proposal type */}
             <div className="space-y-3">
-              {(proposalModal.proposal.type === 'create_diary' || proposalModal.proposal.type === 'update_diary') && (
+              {isDiaryModal && (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -1216,7 +1323,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleApproveAction}
+                onClick={() => handleApproveAction()}
                 disabled={applyingAction}
                 className="px-4 py-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-black rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
               >
@@ -1235,7 +1342,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

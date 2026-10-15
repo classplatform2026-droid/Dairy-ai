@@ -99,6 +99,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    synthesizePage: (data: { content: string; title?: string; date?: string; id?: string; autoSave?: boolean }) =>
+      request<{ unifiedContent: string; title: string; mood: string; savedEntry?: any }>('/diaries/synthesize-page', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Plans
@@ -173,8 +178,8 @@ export const api = {
 
   // AI Direct
   ai: {
-    transformText: (text: string, action: string, tone?: string) =>
-      request<{ output: string; original: string; action: string }>('/ai/transform-text', { method: 'POST', body: JSON.stringify({ text, action, tone }) }),
+    transformText: (text: string, action: string, tone?: string, customPrompt?: string) =>
+      request<{ output: string; original: string; action: string }>('/ai/transform-text', { method: 'POST', body: JSON.stringify({ text, action, tone, customPrompt }) }),
     generatePlan: (goal: string, category?: string) =>
       request<{ plan: any }>('/ai/generate-plan', { method: 'POST', body: JSON.stringify({ goal, category }) }),
     executeSkill: (promptTemplate: string, text: string) =>
