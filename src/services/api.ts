@@ -1,3 +1,5 @@
+import { Idea, IdeaSections } from '../types/index.js';
+
 const API_BASE = '/api';
 
 export function getAuthToken(): string | null {
@@ -194,6 +196,50 @@ export const api = {
         promptTemplate: string;
         skillMd: string;
       }>('/skills/parse-markdown', { method: 'POST', body: JSON.stringify({ markdown }) }),
+  },
+
+  // Ideas
+  ideas: {
+    list: (params?: { status?: string; category?: string; search?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.append('status', params.status);
+      if (params?.category) q.append('category', params.category);
+      if (params?.search) q.append('search', params.search);
+      const queryStr = q.toString() ? `?${q.toString()}` : '';
+      return request<{ ideas: Idea[] }>(`/ideas${queryStr}`);
+    },
+    get: (id: string) =>
+      request<{ idea: Idea }>(`/ideas/${id}`),
+    create: (data: Partial<Idea>) =>
+      request<{ idea: Idea }>('/ideas', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Idea> & { changeNote?: string }) =>
+      request<{ idea: Idea }>(`/ideas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    archive: (id: string) =>
+      request<{ idea: Idea }>(`/ideas/${id}/archive`, { method: 'PATCH' }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/ideas/${id}`, { method: 'DELETE' }),
+    structureFromText: (data: { content: string; category?: string }) =>
+      request<{
+        structured: {
+          title: string;
+          category: string;
+          tags: string[];
+          sections: IdeaSections;
+          missingQuestions: string[];
+          weaknesses: string[];
+          suggestedImprovements: string[];
+        };
+      }>('/ideas/structure-from-text', { method: 'POST', body: JSON.stringify(data) }),
+    analyze: (idea: Partial<Idea>) =>
+      request<{
+        analysis: {
+          critique: string;
+          weaknesses: string[];
+          missingQuestions: string[];
+          suggestedImprovements: string[];
+          nextSteps: string[];
+        };
+      }>('/ideas/analyze', { method: 'POST', body: JSON.stringify({ idea }) }),
   },
 
   // Chats

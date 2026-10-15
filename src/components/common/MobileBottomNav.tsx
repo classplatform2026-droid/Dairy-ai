@@ -10,7 +10,8 @@ import {
   User,
   Settings,
   BookMarked,
-  X
+  X,
+  Lightbulb
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -55,7 +56,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, o
         <button
           onClick={() => setMoreMenuOpen(!moreMenuOpen)}
           className={`flex flex-col items-center py-1.5 px-3 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-            moreMenuOpen || ['books', 'skills', 'reader', 'profile', 'settings'].includes(currentView)
+            moreMenuOpen || ['ideas', 'books', 'skills', 'reader', 'profile', 'settings'].includes(currentView)
               ? 'text-black font-bold'
               : 'text-neutral-500 hover:text-neutral-900'
           }`}
@@ -80,6 +81,22 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, o
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => {
+                  onNavigate('ideas');
+                  setMoreMenuOpen(false);
+                }}
+                className="p-3 border border-neutral-200 rounded-xl text-left hover:bg-neutral-50 flex items-center gap-2.5 text-xs font-medium text-neutral-800 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+                  <Lightbulb className="w-3.5 h-3.5 text-neutral-700" />
+                </div>
+                <div>
+                  <div className="font-semibold text-neutral-900">Ideas Studio</div>
+                  <div className="text-[10px] text-neutral-400">9-section architecture</div>
+                </div>
+              </button>
+
               <button
                 onClick={() => {
                   onNavigate('reader');

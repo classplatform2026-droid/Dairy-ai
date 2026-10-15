@@ -8,6 +8,7 @@ import {
   SkillModel,
   ChatModel,
   MessageModel,
+  IdeaModel,
 } from './models.js';
 import { localStore } from './localStore.js';
 
@@ -93,6 +94,7 @@ export const db = {
           BookModel.deleteMany({ userId: id }),
           ChapterModel.deleteMany({ userId: id }),
           SkillModel.deleteMany({ userId: id, isSystem: false }),
+          IdeaModel.deleteMany({ userId: id }),
           ChatModel.deleteMany({ userId: id }),
           MessageModel.deleteMany({ userId: id }),
         ]);
@@ -596,6 +598,141 @@ export const db = {
       }
       return localStore.updateMessageProposal(userId, messageId, status);
     }
+  },
+
+  // Ideas
+  ideas: {
+    findMany: async (userId: string, filters?: { status?: string; category?: string; search?: string }) => {
+      if (isMongooseConnected) {
+        const query: any = { userId };
+        if (filters?.status && filters.status !== 'all') {
+          query.status = filters.status;
+        }
+        if (filters?.category && filters.category !== 'all') {
+          query.category = filters.category;
+        }
+        if (filters?.search && filters.search.trim()) {
+          const q = filters.search.trim();
+          query.$or = [
+            { title: { $regex: q, $options: 'i' } },
+            { 'sections.overview': { $regex: q, $options: 'i' } },
+            { 'sections.problemAndSolution': { $regex: q, $options: 'i' } },
+            { tags: { $in: [new RegExp(q, 'i')] } },
+          ];
+        }
+        const docs = await IdeaModel.find(query).sort({ updatedAt: -1 }).lean();
+        return docs.map(d => ({ ...d, id: d._id.toString() }));
+      }
+      return localStore.getIdeas(userId, filters);
+    },
+    findById: async (userId: string, id: string) => {
+      if (isMongooseConnected) {
+        const doc = await IdeaModel.findOne({ _id: id, userId }).lean();
+        return doc ? { ...doc, id: doc._id.toString() } : null;
+      }
+      return localStore.getIdeaById(userId, id);
+    },
+    create: async (userId: string, data: any) => {
+      if (isMongooseConnected) {
+        const defaultSections = {
+          overview: data.sections?.overview || '',
+          problemAndSolution: data.sections?.problemAndSolution || '',
+          targetAudience: data.sections?.targetAudience || '',
+          features: data.sections?.features || '',
+          businessModel: data.sections?.businessModel || '',
+          competitors: data.sections?.competitors || '',
+          implementationPlan: data.sections?.implementationPlan || '',
+          risks: data.sections?.risks || '',
+          improvementOpportunities: data.sections?.improvementOpportunities || '',
+        };
+        const doc = await IdeaModel.create({
+          userId,
+          title: data.title || 'Untitled Idea',
+          category: data.category || 'Tech & AI',
+          status: data.status || 'draft',
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          sections: defaultSections,
+          chatId: data.chatId || undefined,
+          version: 1,
+          versionHistory: [{
+            version: 1,
+            title: data.title || 'Untitled Idea',
+            category: data.category || 'Tech & AI',
+            status: data.status || 'draft',
+            sections: { ...defaultSections },
+            tags: Array.isArray(data.tags) ? [...data.tags] : [],
+            changeNote: 'Initial idea creation',
+            savedAt: new Date().toISOString(),
+          }],
+        });
+        return { ...doc.toObject(), id: doc._id.toString() };
+      }
+      return localStore.createIdea(userId, data);
+    },
+    update: async (userId: string, id: string, updates: any) => {
+      if (isMongooseConnected) {
+        const current = await IdeaModel.findOne({ _id: id, userId });
+        if (!current) return null;
+
+        const newVersionNum = (current.version || 1) + 1;
+        const mergedSections = {
+          overview: updates.sections?.overview ?? current.sections?.overview ?? '',
+          problemAndSolution: updates.sections?.problemAndSolution ?? current.sections?.problemAndSolution ?? '',
+          targetAudience: updates.sections?.targetAudience ?? current.sections?.targetAudience ?? '',
+          features: updates.sections?.features ?? current.sections?.features ?? '',
+          businessModel: updates.sections?.businessModel ?? current.sections?.businessModel ?? '',
+          competitors: updates.sections?.competitors ?? current.sections?.competitors ?? '',
+          implementationPlan: updates.sections?.implementationPlan ?? current.sections?.implementationPlan ?? '',
+          risks: updates.sections?.risks ?? current.sections?.risks ?? '',
+          improvementOpportunities: updates.sections?.improvementOpportunities ?? current.sections?.improvementOpportunities ?? '',
+        };
+
+        const newVersion = {
+          version: newVersionNum,
+          title: updates.title ?? current.title,
+          category: updates.category ?? current.category,
+          status: updates.status ?? current.status,
+          sections: { ...mergedSections },
+          tags: Array.isArray(updates.tags) ? updates.tags : current.tags,
+          changeNote: updates.changeNote || 'Idea updated',
+          savedAt: new Date().toISOString(),
+        };
+
+        current.title = updates.title ?? current.title;
+        current.category = updates.category ?? current.category;
+        current.status = updates.status ?? current.status;
+        current.tags = Array.isArray(updates.tags) ? updates.tags : current.tags;
+        current.sections = mergedSections as any;
+        if (updates.chatId) current.chatId = updates.chatId;
+        current.version = newVersionNum;
+        if (!current.versionHistory) current.versionHistory = [];
+        current.versionHistory.push(newVersion as any);
+        if (current.versionHistory.length > 20) {
+          current.versionHistory = current.versionHistory.slice(-20);
+        }
+
+        await current.save();
+        return { ...current.toObject(), id: current._id.toString() };
+      }
+      return localStore.updateIdea(userId, id, updates);
+    },
+    archive: async (userId: string, id: string) => {
+      if (isMongooseConnected) {
+        const current = await IdeaModel.findOne({ _id: id, userId });
+        if (!current) return null;
+        current.status = current.status === 'archived' ? 'active' : 'archived';
+        await current.save();
+        return { ...current.toObject(), id: current._id.toString() };
+      }
+      return localStore.archiveIdea(userId, id);
+    },
+    delete: async (userId: string, id: string) => {
+      if (isMongooseConnected) {
+        const res = await IdeaModel.deleteOne({ _id: id, userId });
+        return res.deletedCount > 0;
+      }
+      return localStore.deleteIdea(userId, id);
+    },
   },
 
   // Export & Stats

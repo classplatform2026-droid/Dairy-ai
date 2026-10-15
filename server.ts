@@ -18,6 +18,7 @@ import chatRoutes from './src/server/routes/chats.js';
 import aiRoutes from './src/server/routes/ai.js';
 import dashboardRoutes from './src/server/routes/dashboard.js';
 import healthRoutes from './src/server/routes/health.js';
+import ideaRoutes from './src/server/routes/ideas.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,7 @@ async function startServer() {
   app.use('/api/plans', planRoutes);
   app.use('/api/books', bookRoutes);
   app.use('/api/skills', skillRoutes);
+  app.use('/api/ideas', ideaRoutes);
   app.use('/api/chats', chatRoutes);
   app.use('/api/ai', aiRoutes);
 

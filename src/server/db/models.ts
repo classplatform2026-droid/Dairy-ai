@@ -240,14 +240,95 @@ const ChatSchema = new Schema<IChat>({
   linkedResourceType: { type: String },
 }, { timestamps: true });
 
+export interface IIdeaSections {
+  overview: string;
+  problemAndSolution: string;
+  targetAudience: string;
+  features: string;
+  businessModel: string;
+  competitors: string;
+  implementationPlan: string;
+  risks: string;
+  improvementOpportunities: string;
+}
+
+export interface IIdeaVersion {
+  version: number;
+  title: string;
+  category: string;
+  status: string;
+  sections: IIdeaSections;
+  tags: string[];
+  changeNote?: string;
+  savedAt: string;
+}
+
+export interface IIdea extends Document {
+  userId: string;
+  title: string;
+  category: string;
+  status: 'draft' | 'active' | 'validated' | 'archived' | 'implemented';
+  tags: string[];
+  sections: IIdeaSections;
+  chatId?: string;
+  version: number;
+  versionHistory: IIdeaVersion[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const IdeaSchema = new Schema<IIdea>({
+  userId: { type: String, required: true, index: true },
+  title: { type: String, required: true },
+  category: { type: String, default: 'Tech & AI' },
+  status: { type: String, enum: ['draft', 'active', 'validated', 'archived', 'implemented'], default: 'draft', index: true },
+  tags: { type: [String], default: [] },
+  sections: {
+    overview: { type: String, default: '' },
+    problemAndSolution: { type: String, default: '' },
+    targetAudience: { type: String, default: '' },
+    features: { type: String, default: '' },
+    businessModel: { type: String, default: '' },
+    competitors: { type: String, default: '' },
+    implementationPlan: { type: String, default: '' },
+    risks: { type: String, default: '' },
+    improvementOpportunities: { type: String, default: '' },
+  },
+  chatId: { type: String, index: true },
+  version: { type: Number, default: 1 },
+  versionHistory: [{
+    version: { type: Number, required: true },
+    title: { type: String, required: true },
+    category: { type: String, default: 'Tech & AI' },
+    status: { type: String, default: 'draft' },
+    sections: {
+      overview: { type: String, default: '' },
+      problemAndSolution: { type: String, default: '' },
+      targetAudience: { type: String, default: '' },
+      features: { type: String, default: '' },
+      businessModel: { type: String, default: '' },
+      competitors: { type: String, default: '' },
+      implementationPlan: { type: String, default: '' },
+      risks: { type: String, default: '' },
+      improvementOpportunities: { type: String, default: '' },
+    },
+    tags: { type: [String], default: [] },
+    changeNote: { type: String },
+    savedAt: { type: String, required: true },
+  }],
+}, { timestamps: true });
+
+IdeaSchema.index({ userId: 1, status: 1 });
+IdeaSchema.index({ userId: 1, updatedAt: -1 });
+
 export interface IAttachment {
-  type: 'book' | 'chapter' | 'plan' | 'skill' | 'diary';
+  type: 'book' | 'chapter' | 'plan' | 'skill' | 'diary' | 'idea';
   id: string;
   title: string;
 }
 
 export interface IActionProposal {
-  type: 'create_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content';
+  type: 'create_diary' | 'update_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content' | 'create_idea' | 'update_idea';
   targetId?: string;
   targetName?: string;
   data: any;
@@ -305,3 +386,4 @@ export const ChapterModel = mongoose.models.Chapter || mongoose.model<IChapter>(
 export const SkillModel = mongoose.models.Skill || mongoose.model<ISkill>('Skill', SkillSchema);
 export const ChatModel = mongoose.models.Chat || mongoose.model<IChat>('Chat', ChatSchema);
 export const MessageModel = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);
+export const IdeaModel = mongoose.models.Idea || mongoose.model<IIdea>('Idea', IdeaSchema);

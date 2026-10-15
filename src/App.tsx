@@ -10,6 +10,7 @@ import { DiaryReaderView } from './components/diary/DiaryReaderView.js';
 import { PlansView } from './components/plans/PlansView.js';
 import { BooksView } from './components/books/BooksView.js';
 import { SkillsView } from './components/skills/SkillsView.js';
+import { IdeasView } from './components/ideas/IdeasView.js';
 import { ChatView } from './components/chat/ChatView.js';
 import { SettingsView } from './components/settings/SettingsView.js';
 
@@ -122,6 +123,19 @@ function MainApp() {
             />
           )}
 
+          {currentView === 'ideas' && (
+            <IdeasView
+              initialCreateNew={viewParams?.createNew}
+              initialSelectedId={viewParams?.selectedId}
+              onNavigateToChat={(ideaId, ideaTitle) => {
+                handleNavigate('chat', {
+                  initialPrompt: `Let's discuss and refine the idea "${ideaTitle}". Analyze its features, revenue model, and potential risks:`,
+                  mode: 'idea',
+                });
+              }}
+            />
+          )}
+
           {currentView === 'skills' && (
             <SkillsView
               onNavigateToChat={(skillId, skillName) => {
@@ -157,6 +171,8 @@ function MainApp() {
           <span>LifeNote AI — Minimalist Companion for Writers & Thinkers</span>
           <div className="flex items-center gap-4">
             <button onClick={() => handleNavigate('dashboard')} className="hover:text-neutral-900 cursor-pointer">Dashboard</button>
+            <span>·</span>
+            <button onClick={() => handleNavigate('ideas')} className="hover:text-neutral-900 cursor-pointer">Ideas</button>
             <span>·</span>
             <button onClick={() => handleNavigate('reader')} className="hover:text-neutral-900 cursor-pointer">Library & Bookshelf</button>
             <span>·</span>

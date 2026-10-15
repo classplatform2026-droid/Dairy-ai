@@ -17,7 +17,8 @@ import {
   Settings,
   LogOut,
   User,
-  X
+  X,
+  Lightbulb
 } from 'lucide-react';
 
 interface TopBarProps {
@@ -31,6 +32,7 @@ const VIEW_TITLES: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview & recent reflections' },
   diary: { title: 'Personal Diary', subtitle: 'Daily logs & thoughts' },
   reader: { title: 'Library & Bookshelf', subtitle: 'Book covers & reading room' },
+  ideas: { title: 'Ideas Studio', subtitle: 'Capture, structure & validate thoughts' },
   plans: { title: 'Action Plans', subtitle: 'Goals, checklists & deadlines' },
   books: { title: 'Books & Manuscripts', subtitle: 'Long-form chapters & works' },
   skills: { title: 'Skills Library', subtitle: 'Reusable intelligence prompts' },
@@ -156,6 +158,22 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <div>
                   <div className="font-medium">Diary Entry</div>
                   <div className="text-[10px] text-neutral-400">Capture daily reflection</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setCreateDropdownOpen(false);
+                  onNavigate('ideas', { createNew: true });
+                }}
+                className="w-full text-left px-3 py-2 text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+              >
+                <div className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-neutral-800">
+                  <Lightbulb className="w-3 h-3" />
+                </div>
+                <div>
+                  <div className="font-medium">New Idea</div>
+                  <div className="text-[10px] text-neutral-400">9-section venture outline</div>
                 </div>
               </button>
 

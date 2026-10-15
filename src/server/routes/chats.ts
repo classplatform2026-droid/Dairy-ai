@@ -245,6 +245,11 @@ No diary page written yet for today. When the user writes their first message fo
           if (sk) {
             contextSnippets.push(`[REUSABLE SKILL INSTRUCTION: "${sk.name}"]\n${sk.promptTemplate}`);
           }
+        } else if (att.type === 'idea') {
+          const idDoc = await db.ideas.findById(req.user!.id, att.id);
+          if (idDoc) {
+            contextSnippets.push(`[IDEA: "${idDoc.title}" (${idDoc.category}, Status: ${idDoc.status})]\nOverview: ${idDoc.sections?.overview || 'N/A'}\nProblem & Solution: ${idDoc.sections?.problemAndSolution || 'N/A'}\nTarget Audience: ${idDoc.sections?.targetAudience || 'N/A'}\nFeatures: ${idDoc.sections?.features || 'N/A'}\nBusiness Model: ${idDoc.sections?.businessModel || 'N/A'}\nCompetitors: ${idDoc.sections?.competitors || 'N/A'}\nImplementation: ${idDoc.sections?.implementationPlan || 'N/A'}\nRisks: ${idDoc.sections?.risks || 'N/A'}\nImprovements: ${idDoc.sections?.improvementOpportunities || 'N/A'}`);
+          }
         }
       }
     }
@@ -340,7 +345,7 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
     const isDiaryAction =
       pType.includes('diary') ||
       pType.includes('journal') ||
-      !['update_plan', 'add_chapter', 'create_skill'].includes(pType);
+      !['update_plan', 'add_chapter', 'create_skill', 'create_idea', 'update_idea'].includes(pType);
 
     if (isDiaryAction) {
       const todayStr = (req.body.clientDate && typeof req.body.clientDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.clientDate))
@@ -442,6 +447,26 @@ router.post('/:id/messages/:msgId/apply-action', async (req: AuthenticatedReques
         tags: dataToUse.tags || ['custom'],
         icon: 'Sparkles',
       });
+    } else if (proposal.type === 'create_idea' || proposal.type === 'update_idea') {
+      if (proposal.type === 'update_idea' && proposal.targetId) {
+        createdResource = await db.ideas.update(req.user!.id, proposal.targetId, {
+          title: dataToUse.title,
+          category: dataToUse.category,
+          tags: dataToUse.tags,
+          sections: dataToUse.sections,
+          changeNote: 'Updated from chat conversation',
+          chatId: req.params.id,
+        });
+      } else {
+        createdResource = await db.ideas.create(req.user!.id, {
+          title: dataToUse.title || 'New Idea',
+          category: dataToUse.category || 'Tech & AI',
+          status: dataToUse.status || 'draft',
+          tags: dataToUse.tags || ['idea'],
+          sections: dataToUse.sections || {},
+          chatId: req.params.id,
+        });
+      }
     }
 
     // Mark proposal as applied in message

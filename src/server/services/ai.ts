@@ -626,6 +626,223 @@ Return ONLY a valid JSON object matching this schema:
   }
 }
 
+export async function structureIdeaFromContent(params: {
+  content: string;
+  category?: string;
+  customApiKey?: string;
+  model?: string;
+}): Promise<{
+  title: string;
+  category: string;
+  tags: string[];
+  sections: {
+    overview: string;
+    problemAndSolution: string;
+    targetAudience: string;
+    features: string;
+    businessModel: string;
+    competitors: string;
+    implementationPlan: string;
+    risks: string;
+    improvementOpportunities: string;
+  };
+  missingQuestions: string[];
+  weaknesses: string[];
+  suggestedImprovements: string[];
+}> {
+  const { content, category, customApiKey, model } = params;
+  const isBengali = /[\u0980-\u09FF]/.test(content);
+
+  const prompt = `You are a world-class venture architect, product strategist, and startup mentor.
+Your task is to take the user's raw thoughts, pitch, conversation, or brainstorm notes about an idea, and organize it into 9 structured, crisp sections.
+
+Raw Idea Content:
+"""
+${content}
+"""
+
+Category Hint (if any): "${category || ''}"
+
+Analyze the idea critically and thoroughly. Return a valid JSON object matching this schema without markdown code blocks:
+{
+  "title": "A clear, compelling title for the idea (in the language of the input, e.g. Bengali or English)",
+  "category": "One of: Tech & AI, Business, Productivity, Creative, Social, Personal, or Other",
+  "tags": ["tag1", "tag2", "tag3"],
+  "sections": {
+    "overview": "High-level summary of what the idea is and its unique value proposition.",
+    "problemAndSolution": "The exact pain point being addressed and how this solution uniquely solves it.",
+    "targetAudience": "Who will use, purchase, or benefit from this. Specific user personas.",
+    "features": "Bullet-point breakdown of key capabilities, workflows, and core features.",
+    "businessModel": "How this can be monetized, sustained, or delivered efficiently.",
+    "competitors": "Existing alternatives, direct/indirect competitors, and key differentiators.",
+    "implementationPlan": "Actionable rollout phases (MVP, validation, launch steps).",
+    "risks": "Primary pitfalls, technical roadblocks, or market adoption challenges.",
+    "improvementOpportunities": "High-impact ways to expand, strengthen, or refine the idea."
+  },
+  "missingQuestions": [
+    "Key question 1 about missing critical information",
+    "Key question 2 about target pricing or distribution"
+  ],
+  "weaknesses": [
+    "Identified potential bottleneck or flaw 1",
+    "Identified potential bottleneck or flaw 2"
+  ],
+  "suggestedImprovements": [
+    "Actionable improvement recommendation 1",
+    "Actionable improvement recommendation 2"
+  ]
+}`;
+
+  try {
+    const ai = getGenAIClient(customApiKey);
+    const { response } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const raw = (response.text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(raw);
+    return {
+      title: parsed.title || (isBengali ? 'নতুন আইডিয়া' : 'New Project Idea'),
+      category: parsed.category || category || 'Tech & AI',
+      tags: Array.isArray(parsed.tags) ? parsed.tags : ['idea'],
+      sections: {
+        overview: parsed.sections?.overview || content.slice(0, 200),
+        problemAndSolution: parsed.sections?.problemAndSolution || '',
+        targetAudience: parsed.sections?.targetAudience || '',
+        features: parsed.sections?.features || '',
+        businessModel: parsed.sections?.businessModel || '',
+        competitors: parsed.sections?.competitors || '',
+        implementationPlan: parsed.sections?.implementationPlan || '',
+        risks: parsed.sections?.risks || '',
+        improvementOpportunities: parsed.sections?.improvementOpportunities || '',
+      },
+      missingQuestions: Array.isArray(parsed.missingQuestions) ? parsed.missingQuestions : [],
+      weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+      suggestedImprovements: Array.isArray(parsed.suggestedImprovements) ? parsed.suggestedImprovements : [],
+    };
+  } catch (err) {
+    console.warn('[AI Service] structureIdeaFromContent fallback:', err);
+    return {
+      title: isBengali ? 'নতুন উদ্ভাবনী আইডিয়া' : 'New Concept',
+      category: category || 'Tech & AI',
+      tags: ['idea', 'concept'],
+      sections: {
+        overview: content,
+        problemAndSolution: isBengali ? 'সমস্যা ও সমাধানের রূপরেখা প্রস্তুত করা প্রয়োজন।' : 'Identifies a core pain point and addresses it directly.',
+        targetAudience: isBengali ? 'সুনির্দিষ্ট ব্যবহারকারী ও লক্ষ্য দল।' : 'Early adopters and active users.',
+        features: isBengali ? 'মূল ফিচার ও কর্মপদ্ধতি।' : 'Core product features and key user flows.',
+        businessModel: isBengali ? 'ব্যবসায়িক মডেল ও রাজস্ব পরিকল্পনা।' : 'Value-based monetization or subscription.',
+        competitors: isBengali ? 'বর্তমান বিকল্প পদ্ধতি ও প্রতিযোগী।' : 'Existing alternatives and competitors.',
+        implementationPlan: isBengali ? 'প্রাথমিক ধাপ: প্রোটোটাইপ তৈরি ও যাচাই।' : 'Phase 1: MVP build & rapid user testing.',
+        risks: isBengali ? 'সম্ভাব্য ঝুঁকি ও চ্যালেঞ্জ।' : 'Adoption barriers and technical dependencies.',
+        improvementOpportunities: isBengali ? 'ভবিষ্যৎ উন্নয়নের সুযোগ।' : 'High-impact feature expansions.',
+      },
+      missingQuestions: isBengali
+        ? ['এই আইডিয়াটির প্রধান টার্গেট অডিয়েন্স কারা?', 'মনোটাইজেশন বা আয়ের উৎস কী হবে?']
+        : ['Who is the primary paying customer?', 'What is your competitive moat?'],
+      weaknesses: isBengali
+        ? ['বাজার যাচাই ও ব্যবহারকারীর ফিডব্যাক সংগ্রহ করা প্রয়োজন।']
+        : ['Needs clear initial validation and distribution strategy.'],
+      suggestedImprovements: isBengali
+        ? ['প্রথম ধাপে একটি ছোট MVP তৈরি করে যাচাই করুন।']
+        : ['Start with a tightly scoped MVP to test core assumptions.'],
+    };
+  }
+}
+
+export async function analyzeIdeaAndSuggestImprovements(params: {
+  idea: any;
+  customApiKey?: string;
+  model?: string;
+}): Promise<{
+  critique: string;
+  weaknesses: string[];
+  missingQuestions: string[];
+  suggestedImprovements: string[];
+  nextSteps: string[];
+}> {
+  const { idea, customApiKey, model } = params;
+
+  const ideaSummary = `
+Title: ${idea.title || 'Untitled'}
+Category: ${idea.category || 'General'}
+Tags: ${(idea.tags || []).join(', ')}
+Sections:
+- Overview: ${idea.sections?.overview || 'N/A'}
+- Problem & Solution: ${idea.sections?.problemAndSolution || 'N/A'}
+- Target Audience: ${idea.sections?.targetAudience || 'N/A'}
+- Features: ${idea.sections?.features || 'N/A'}
+- Business Model: ${idea.sections?.businessModel || 'N/A'}
+- Competitors: ${idea.sections?.competitors || 'N/A'}
+- Implementation Plan: ${idea.sections?.implementationPlan || 'N/A'}
+- Risks: ${idea.sections?.risks || 'N/A'}
+- Improvement Opportunities: ${idea.sections?.improvementOpportunities || 'N/A'}
+`;
+
+  const prompt = `You are a seasoned startup advisor and product architect.
+Analyze the following idea objectively. Provide constructive critique, identify weak spots, ask probing questions on missing information, and propose actionable improvements.
+
+IDEA DETAILS:
+${ideaSummary}
+
+Return ONLY valid JSON matching this schema:
+{
+  "critique": "A concise 2-sentence executive summary of the idea's potential and current maturity.",
+  "weaknesses": [
+    "Specific vulnerability or unvalidated assumption 1",
+    "Specific vulnerability 2"
+  ],
+  "missingQuestions": [
+    "Critical question 1 that the founder must answer",
+    "Critical question 2"
+  ],
+  "suggestedImprovements": [
+    "High-leverage improvement 1",
+    "High-leverage improvement 2"
+  ],
+  "nextSteps": [
+    "Actionable step 1 to execute this week",
+    "Actionable step 2"
+  ]
+}`;
+
+  try {
+    const ai = getGenAIClient(customApiKey);
+    const { response } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const raw = (response.text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('[AI Service] analyzeIdeaAndSuggestImprovements fallback:', err);
+    return {
+      critique: 'The idea has strong foundations but requires sharper user validation and clear differentiation.',
+      weaknesses: [
+        'Value proposition needs to be tested with real end-users.',
+        'Distribution and user acquisition channel is currently unspecified.'
+      ],
+      missingQuestions: [
+        'What is the single most urgent pain point that forces users to pay or switch?',
+        'How will you acquire your first 50 engaged users at zero cost?'
+      ],
+      suggestedImprovements: [
+        'Narrow down the MVP to the single core killer feature before expanding.',
+        'Define a measurable metric for user success in week 1.'
+      ],
+      nextSteps: [
+        'Conduct 5 discovery interviews with target users.',
+        'Build a clickable prototype or landing page to gauge real interest.'
+      ]
+    };
+  }
+}
 
 export function craftBeautifulJournalEntry(input: string, _todayStr?: string): string {
   const clean = (input || '').trim();
@@ -666,7 +883,7 @@ function generateSmartLocalResponse(
   _contextText?: string
 ): {
   reply: string;
-  detectedIntent: { type: 'write' | 'improve' | 'summarize' | 'plan' | 'save' | 'general'; explanation: string };
+  detectedIntent: { type: 'write' | 'improve' | 'summarize' | 'plan' | 'save' | 'idea' | 'general'; explanation: string };
   actionProposal?: any;
 } {
   const lower = (userMessage || '').toLowerCase();
@@ -735,7 +952,45 @@ function generateSmartLocalResponse(
     };
   }
 
-  // 4. Default clean conversational response
+  // 4. User sharing or discussing a business/product/project idea
+  const isIdeaSharing = mode === 'idea' ||
+    lower.includes('idea') || lower.includes('আইডিয়া') || lower.includes('startup') ||
+    lower.includes('app banate') || lower.includes('product') || lower.includes('ব্যবসা') ||
+    lower.includes('concept') || lower.includes('platform');
+
+  if (isIdeaSharing) {
+    const isBengali = /[\u0980-\u09FF]/.test(userMessage) || lower.includes('amar') || lower.includes('koro');
+    const title = isBengali ? 'নতুন উদ্ভাবনী প্রজেক্ট আইডিয়া' : 'Innovative Project Idea';
+    return {
+      reply: isBengali
+        ? 'আপনার আইডিয়াটি বিশ্লেষণ করে ৯টি প্রধান সেকশনে গুছিয়ে দিয়েছি। কোন বিষয়টি আরও স্পষ্ট করতে চান?'
+        : 'I have structured your idea across the 9 core sections. Review the preview below.',
+      detectedIntent: { type: 'idea', explanation: 'User discussed a project or business idea.' },
+      actionProposal: {
+        type: 'create_idea',
+        targetName: title,
+        data: {
+          title,
+          category: 'Tech & AI',
+          tags: isBengali ? ['আইডিয়া', 'উদ্ভাবন'] : ['idea', 'concept'],
+          sections: {
+            overview: userMessage,
+            problemAndSolution: isBengali ? 'সমস্যা ও সমাধানের রূপরেখা।' : 'Identifies a core pain point and offers an accessible, structured solution.',
+            targetAudience: isBengali ? 'প্রাথমিক ব্যবহারকারী ও সুবিধাভোগী।' : 'Early adopters, thinkers, and domain practitioners.',
+            features: isBengali ? 'মূল ফিচার ও কর্মপদ্ধতি।' : 'Core workflow automation, structured documentation, and real-time validation.',
+            businessModel: isBengali ? 'ব্যবসায়িক রূপরেখা ও রাজস্ব মডেল।' : 'Value-driven freemium or direct subscription with premium capabilities.',
+            competitors: isBengali ? 'বিদ্যমান প্রতিযোগী ও বিকল্প।' : 'Traditional manual workflows and generic tools.',
+            implementationPlan: isBengali ? 'প্রথম ধাপ: MVP তৈরি ও ব্যবহারকারী যাচাই।' : 'Phase 1: Minimal viable prototype; Phase 2: User feedback; Phase 3: Launch.',
+            risks: isBengali ? 'সম্ভাব্য ঝুঁকি ও গ্রহণ করার চ্যালেঞ্জ।' : 'Adoption friction and technical complexity.',
+            improvementOpportunities: isBengali ? 'ভবিষ্যৎ উন্নয়ন ও সম্প্রসারণ।' : 'Integrate collaborative workflows and automated analytics.',
+          },
+        },
+        status: 'pending',
+      },
+    };
+  }
+
+  // 5. Default clean conversational response
   const isBengali = /[\u0980-\u09FF]/.test(userMessage) || lower.includes('amar') || lower.includes('koro');
   return {
     reply: isBengali
@@ -753,9 +1008,9 @@ function parseAndSanitizeAIResponse(
   mode: string = 'default'
 ): {
   reply: string;
-  detectedIntent: { type: 'write' | 'improve' | 'summarize' | 'plan' | 'save' | 'general'; explanation: string };
+  detectedIntent: { type: 'write' | 'improve' | 'summarize' | 'plan' | 'save' | 'idea' | 'general'; explanation: string };
   actionProposal?: {
-    type: 'create_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content';
+    type: 'create_diary' | 'update_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content' | 'create_idea' | 'update_idea';
     targetId?: string;
     targetName?: string;
     data: any;
@@ -876,8 +1131,10 @@ function parseAndSanitizeAIResponse(
     let rawType = String(actionProposal.type || '').toLowerCase().trim();
 
     // Clean up pipes or corrupted schema strings like "CREATE_DIARY | UPDATE_DIARY | ..."
-    if (rawType.includes('|') || !['create_diary', 'update_diary', 'update_plan', 'add_chapter', 'create_skill'].includes(rawType)) {
-      if (rawType.includes('diary') || rawType.includes('journal') || mode === 'diary' || parsed.detectedIntent?.type === 'write' || parsed.detectedIntent?.type === 'save') {
+    if (rawType.includes('|') || !['create_diary', 'update_diary', 'update_plan', 'add_chapter', 'create_skill', 'create_idea', 'update_idea'].includes(rawType)) {
+      if (rawType.includes('idea') || mode === 'idea' || parsed.detectedIntent?.type === 'idea') {
+        rawType = 'create_idea';
+      } else if (rawType.includes('diary') || rawType.includes('journal') || mode === 'diary' || parsed.detectedIntent?.type === 'write' || parsed.detectedIntent?.type === 'save') {
         rawType = 'create_diary';
       } else if (rawType.includes('plan') || mode === 'plan' || parsed.detectedIntent?.type === 'plan') {
         rawType = 'update_plan';
@@ -896,7 +1153,29 @@ function parseAndSanitizeAIResponse(
     }
     const d = actionProposal.data;
 
-    if (actionProposal.type === 'create_diary' || actionProposal.type === 'update_diary') {
+    if (actionProposal.type === 'create_idea' || actionProposal.type === 'update_idea') {
+      const isBengali = /[\u0980-\u09FF]/.test(userMessage || reply);
+      const fallbackTitle = isBengali ? 'নতুন উদ্ভাবনী প্রজেক্ট আইডিয়া' : 'New Project Idea';
+      const title = (d.title || d.ideaTitle || actionProposal.targetName || fallbackTitle).trim();
+      d.title = title;
+      actionProposal.targetName = title;
+      d.category = d.category || 'Tech & AI';
+      d.tags = Array.isArray(d.tags) && d.tags.length > 0 ? d.tags : (isBengali ? ['আইডিয়া', 'উদ্ভাবন'] : ['idea', 'concept']);
+
+      const sec = d.sections || {};
+      d.sections = {
+        overview: (sec.overview || d.overview || userMessage || '').trim(),
+        problemAndSolution: (sec.problemAndSolution || d.problemAndSolution || '').trim(),
+        targetAudience: (sec.targetAudience || d.targetAudience || '').trim(),
+        features: (sec.features || d.features || '').trim(),
+        businessModel: (sec.businessModel || d.businessModel || '').trim(),
+        competitors: (sec.competitors || d.competitors || '').trim(),
+        implementationPlan: (sec.implementationPlan || d.implementationPlan || '').trim(),
+        risks: (sec.risks || d.risks || '').trim(),
+        improvementOpportunities: (sec.improvementOpportunities || d.improvementOpportunities || '').trim(),
+      };
+      actionProposal.status = 'pending';
+    } else if (actionProposal.type === 'create_diary' || actionProposal.type === 'update_diary') {
       // Strict date enforcement: replace any 2024 or 2025 or placeholder with todayStr
       if (!d.date || d.date.includes('YYYY') || /202[0-5]/.test(d.date)) {
         d.date = todayStr;
@@ -961,8 +1240,8 @@ const chatResponseSchema = {
       properties: {
         type: {
           type: Type.STRING,
-          enum: ['write', 'improve', 'summarize', 'plan', 'save', 'general'],
-          description: 'One of: write, improve, summarize, plan, save, general',
+          enum: ['write', 'improve', 'summarize', 'plan', 'save', 'idea', 'general'],
+          description: 'One of: write, improve, summarize, plan, save, idea, general',
         },
         explanation: { type: Type.STRING, description: 'Brief explanation of intent' },
       },
@@ -970,11 +1249,11 @@ const chatResponseSchema = {
     },
     actionProposal: {
       type: Type.OBJECT,
-      description: 'Action proposal ONLY if saving, planning, or logging. Otherwise null.',
+      description: 'Action proposal ONLY if saving, planning, structuring an idea, or logging. Otherwise null.',
       properties: {
         type: {
           type: Type.STRING,
-          enum: ['create_diary', 'update_diary', 'update_plan', 'add_chapter', 'create_skill'],
+          enum: ['create_diary', 'update_diary', 'update_plan', 'add_chapter', 'create_skill', 'create_idea', 'update_idea'],
           description: 'The action type to perform. Choose strictly one.',
         },
         targetId: { type: Type.STRING },
@@ -984,11 +1263,12 @@ const chatResponseSchema = {
           properties: {
             title: {
               type: Type.STRING,
-              description: 'An evocative, inspiring title in Bengali (বাংলা) or English (e.g., "আত্মোপলব্ধি ও মনের গভীর সত্য").',
+              description: 'Title for diary or idea in Bengali or English.',
             },
+            category: { type: Type.STRING, description: 'Category for idea or plan.' },
             content: {
               type: Type.STRING,
-              description: 'MANDATORY: Beautifully articulated, lyrical, and polished journal entry expanding on the user\'s thoughts and feelings with emotional depth and literary beauty. NEVER copy-paste the user\'s raw brief words. Write a refined, articulate reflection in Bengali (বাংলা) if user writes in Bengali/Banglish.',
+              description: 'Polished journal entry for create_diary.',
             },
             date: { type: Type.STRING, description: 'Date in YYYY-MM-DD' },
             mood: { type: Type.STRING },
@@ -1001,6 +1281,20 @@ const chatResponseSchema = {
             name: { type: Type.STRING },
             description: { type: Type.STRING },
             promptTemplate: { type: Type.STRING },
+            sections: {
+              type: Type.OBJECT,
+              properties: {
+                overview: { type: Type.STRING },
+                problemAndSolution: { type: Type.STRING },
+                targetAudience: { type: Type.STRING },
+                features: { type: Type.STRING },
+                businessModel: { type: Type.STRING },
+                competitors: { type: Type.STRING },
+                implementationPlan: { type: Type.STRING },
+                risks: { type: Type.STRING },
+                improvementOpportunities: { type: Type.STRING },
+              },
+            },
           },
         },
       },
@@ -1011,7 +1305,7 @@ const chatResponseSchema = {
 
 export async function chatWithContext(params: {
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
-  mode: 'default' | 'diary' | 'book' | 'plan';
+  mode: 'default' | 'diary' | 'book' | 'plan' | 'idea';
   contextText?: string;
   attachments?: Array<{ type: string; id: string; title: string }>;
   customApiKey?: string;
@@ -1020,9 +1314,9 @@ export async function chatWithContext(params: {
   clientTimezone?: string;
 }): Promise<{
   reply: string;
-  detectedIntent: { type: 'write' | 'improve' | 'summarize' | 'plan' | 'save' | 'general'; explanation: string };
+  detectedIntent: { type: 'write' | 'improve' | 'summarize' | 'plan' | 'save' | 'idea' | 'general'; explanation: string };
   actionProposal?: {
-    type: 'create_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content';
+    type: 'create_diary' | 'update_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content' | 'create_idea' | 'update_idea';
     targetId?: string;
     targetName?: string;
     data: any;
@@ -1059,16 +1353,13 @@ CONCISENESS FOR CHAT REPLY (MANDATORY):
 - The conversational "reply" MUST BE VERY SHORT (1 to 2 sentences maximum).
 - NEVER write long paragraphs, essays, or philosophical lectures in "reply".
 
-JOURNAL CRAFTING CONSTITUTION (CRITICAL):
-When the user shares personal reflections, thoughts, emotions, habits, or experiences (even in brief or casual words like "posondo kori", "bujte parsi na"):
-1. THE CONVERSATIONAL REPLY:
-   - Acknowledge their thought warmly in 1 short sentence in "reply" (e.g. "আপনার অনুভূতিটুকু সত্যি সুন্দর ও খাঁটি; এটি আপনার জার্নালের জন্য চমৎকারভাবে লিখে দিয়েছি।").
-2. THE ACTION PROPOSAL (actionProposal.data.content):
-   - CRITICAL: NEVER just copy-paste the user's raw brief words or repeat what they typed!
-   - Act as an eloquent essayist and master journal companion: transform their raw thoughts into a beautifully crafted, evocative, and deeply reflective journal entry in proper Bengali (বাংলা).
-   - Express the psychological insight, emotional depth, and literary beauty of their reflection.
-   - Give it an inspiring, poetic title (e.g. "আত্মোপলব্ধি ও ভাবনার নতুন দিগন্ত", "নীরব আত্মদর্শন").
-   - The user expects the proposal box to contain an elevated, polished AI output that they are proud to keep in their diary.
+IDEAS MODULE CONSTITUTION:
+When the user discusses, pitches, or brainstorms a business, product, app, startup, or creative idea:
+1. Detect intent as 'idea'.
+2. Provide a 'create_idea' or 'update_idea' action proposal.
+3. Organize the unstructured discussion into the 9 structured sections in actionProposal.data.sections:
+   - overview, problemAndSolution, targetAudience, features, businessModel, competitors, implementationPlan, risks, improvementOpportunities.
+4. In 'reply', keep it strictly 1-2 short sentences: ask a pointed question if vital info (e.g. monetization, target user) is missing, or suggest a high-impact improvement.
 
 CURRENT MODE: ${mode.toUpperCase()}
 Available Saved Context:
@@ -1076,21 +1367,15 @@ ${contextText ? contextText : '(No attached resources)'}
 
 Attachments: ${attachments && attachments.length > 0 ? attachments.map(a => `${a.type.toUpperCase()}: "${a.title}"`).join(', ') : 'None'}
 
-DIARY CONSTITUTION:
-A Diary/Journal is strictly organized by DATE. Each calendar day has ONE single continuous page.
-- Today's date is strictly "${todayStr}".
-- If existing text for today is shown in context:
-  * When the user gives new thoughts or daily moments, integrate them seamlessly into today's single record.
-  * When the user corrects or refines details, update them in place while keeping the rest of today's page intact.
-  * In 'actionProposal.data.content', always return the COMPLETE, beautifully unified text for that day's page.
-
 ACTION PROPOSAL RULES (CRITICAL):
 - 'actionProposal' must be NULL for:
   * Casual greetings (e.g. "Hi", "Hello", "Tmi kmn aso", "কেমন আছেন")
   * General knowledge questions
   * Banter where no thoughts or tasks need saving
-- 'actionProposal' should ONLY be provided when the user shares thoughts, feelings, plans, or asks to log something:
+- 'actionProposal' should ONLY be provided when the user shares thoughts, feelings, plans, ideas, or asks to log something:
   * type: "create_diary" (for new journal reflection)
+  * type: "create_idea" (for new startup/product/project idea)
+  * type: "update_idea" (for existing idea enhancements)
   * type: "update_plan" (for goals and tasks)
   * type: "add_chapter" (for book writing)
   * type: "create_skill" (for custom prompt skills)

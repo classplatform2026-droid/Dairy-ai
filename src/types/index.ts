@@ -123,14 +123,53 @@ export interface Skill {
   updatedAt: string;
 }
 
+export interface IdeaSections {
+  overview: string;
+  problemAndSolution: string;
+  targetAudience: string;
+  features: string;
+  businessModel: string;
+  competitors: string;
+  implementationPlan: string;
+  risks: string;
+  improvementOpportunities: string;
+}
+
+export interface IdeaVersion {
+  version: number;
+  title: string;
+  category: string;
+  status: string;
+  sections: IdeaSections;
+  tags: string[];
+  changeNote?: string;
+  savedAt: string;
+}
+
+export interface Idea {
+  id: string;
+  _id?: string;
+  userId: string;
+  title: string;
+  category: 'Tech & AI' | 'Business' | 'Productivity' | 'Creative' | 'Social' | 'Personal' | string;
+  status: 'draft' | 'active' | 'validated' | 'archived' | 'implemented';
+  tags: string[];
+  sections: IdeaSections;
+  chatId?: string;
+  version: number;
+  versionHistory?: IdeaVersion[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Attachment {
-  type: 'book' | 'chapter' | 'plan' | 'skill' | 'diary';
+  type: 'book' | 'chapter' | 'plan' | 'skill' | 'diary' | 'idea';
   id: string;
   title: string;
 }
 
 export interface ActionProposal {
-  type: 'create_diary' | 'update_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content';
+  type: 'create_diary' | 'update_diary' | 'update_plan' | 'add_chapter' | 'create_skill' | 'replace_content' | 'create_idea' | 'update_idea';
   targetId?: string;
   targetName?: string;
   data: any;
@@ -156,7 +195,7 @@ export interface Chat {
   _id?: string;
   userId: string;
   title: string;
-  mode: 'default' | 'diary' | 'book' | 'plan';
+  mode: 'default' | 'diary' | 'book' | 'plan' | 'idea';
   linkedResourceId?: string;
   linkedResourceType?: string;
   messages?: Message[];
@@ -169,6 +208,7 @@ export interface DashboardStats {
   totalPlans: number;
   totalBooks: number;
   totalChapters: number;
+  totalIdeas?: number;
   totalWords: number;
   totalTasks: number;
   completedTasks: number;

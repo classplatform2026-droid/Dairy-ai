@@ -8,6 +8,7 @@ export interface DatabaseState {
   books: any[];
   chapters: any[];
   skills: any[];
+  ideas: any[];
   chats: any[];
   messages: any[];
 }
@@ -104,6 +105,7 @@ class LocalStore {
     books: [],
     chapters: [],
     skills: [...INITIAL_SKILLS],
+    ideas: [],
     chats: [],
     messages: []
   };
@@ -128,6 +130,7 @@ class LocalStore {
           books: parsed.books || [],
           chapters: parsed.chapters || [],
           skills: parsed.skills && parsed.skills.length > 0 ? parsed.skills : [...INITIAL_SKILLS],
+          ideas: parsed.ideas || [],
           chats: parsed.chats || [],
           messages: parsed.messages || [],
         };
@@ -831,6 +834,138 @@ Refined transformation matching ${s.name}.
     };
   }
 
+  // --- Ideas ---
+  public async getIdeas(userId: string, filters?: { status?: string; category?: string; search?: string }) {
+    let list = this.state.ideas.filter(i => i.userId === userId);
+    if (filters?.status && filters.status !== 'all') {
+      list = list.filter(i => i.status === filters.status);
+    }
+    if (filters?.category && filters.category !== 'all') {
+      list = list.filter(i => i.category === filters.category);
+    }
+    if (filters?.search && filters.search.trim()) {
+      const q = filters.search.toLowerCase().trim();
+      list = list.filter(i =>
+        (i.title || '').toLowerCase().includes(q) ||
+        (i.sections?.overview || '').toLowerCase().includes(q) ||
+        (i.sections?.problemAndSolution || '').toLowerCase().includes(q) ||
+        (i.tags || []).some((t: string) => t.toLowerCase().includes(q))
+      );
+    }
+    return list.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+  }
+
+  public async getIdeaById(userId: string, id: string) {
+    return this.state.ideas.find(i => (i.id === id || i._id === id) && i.userId === userId) || null;
+  }
+
+  public async createIdea(userId: string, data: any) {
+    const defaultSections = {
+      overview: data.sections?.overview || '',
+      problemAndSolution: data.sections?.problemAndSolution || '',
+      targetAudience: data.sections?.targetAudience || '',
+      features: data.sections?.features || '',
+      businessModel: data.sections?.businessModel || '',
+      competitors: data.sections?.competitors || '',
+      implementationPlan: data.sections?.implementationPlan || '',
+      risks: data.sections?.risks || '',
+      improvementOpportunities: data.sections?.improvementOpportunities || '',
+    };
+
+    const idea = {
+      id: this.generateId(),
+      userId,
+      title: data.title || 'Untitled Idea',
+      category: data.category || 'Tech & AI',
+      status: data.status || 'draft',
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      sections: defaultSections,
+      chatId: data.chatId || undefined,
+      version: 1,
+      versionHistory: [{
+        version: 1,
+        title: data.title || 'Untitled Idea',
+        category: data.category || 'Tech & AI',
+        status: data.status || 'draft',
+        sections: { ...defaultSections },
+        tags: Array.isArray(data.tags) ? [...data.tags] : [],
+        changeNote: 'Initial idea creation',
+        savedAt: new Date().toISOString(),
+      }],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.state.ideas.push(idea);
+    this.persist();
+    return idea;
+  }
+
+  public async updateIdea(userId: string, id: string, updates: any) {
+    const idx = this.state.ideas.findIndex(i => (i.id === id || i._id === id) && i.userId === userId);
+    if (idx === -1) return null;
+
+    const current = this.state.ideas[idx];
+    const newVersionNum = (current.version || 1) + 1;
+
+    const mergedSections = {
+      overview: updates.sections?.overview ?? current.sections?.overview ?? '',
+      problemAndSolution: updates.sections?.problemAndSolution ?? current.sections?.problemAndSolution ?? '',
+      targetAudience: updates.sections?.targetAudience ?? current.sections?.targetAudience ?? '',
+      features: updates.sections?.features ?? current.sections?.features ?? '',
+      businessModel: updates.sections?.businessModel ?? current.sections?.businessModel ?? '',
+      competitors: updates.sections?.competitors ?? current.sections?.competitors ?? '',
+      implementationPlan: updates.sections?.implementationPlan ?? current.sections?.implementationPlan ?? '',
+      risks: updates.sections?.risks ?? current.sections?.risks ?? '',
+      improvementOpportunities: updates.sections?.improvementOpportunities ?? current.sections?.improvementOpportunities ?? '',
+    };
+
+    const newVersionEntry = {
+      version: newVersionNum,
+      title: updates.title ?? current.title,
+      category: updates.category ?? current.category,
+      status: updates.status ?? current.status,
+      sections: { ...mergedSections },
+      tags: Array.isArray(updates.tags) ? [...updates.tags] : (current.tags || []),
+      changeNote: updates.changeNote || 'Idea updated',
+      savedAt: new Date().toISOString(),
+    };
+
+    const history = Array.isArray(current.versionHistory) ? [...current.versionHistory] : [];
+    history.push(newVersionEntry);
+
+    const updated = {
+      ...current,
+      ...updates,
+      sections: mergedSections,
+      version: newVersionNum,
+      versionHistory: history.slice(-20), // keep latest 20 snapshots
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.state.ideas[idx] = updated;
+    this.persist();
+    return updated;
+  }
+
+  public async archiveIdea(userId: string, id: string) {
+    const idx = this.state.ideas.findIndex(i => (i.id === id || i._id === id) && i.userId === userId);
+    if (idx === -1) return null;
+    const current = this.state.ideas[idx];
+    current.status = current.status === 'archived' ? 'active' : 'archived';
+    current.updatedAt = new Date().toISOString();
+    this.persist();
+    return current;
+  }
+
+  public async deleteIdea(userId: string, id: string) {
+    const idx = this.state.ideas.findIndex(i => (i.id === id || i._id === id) && i.userId === userId);
+    if (idx === -1) return false;
+    this.state.ideas.splice(idx, 1);
+    this.persist();
+    return true;
+  }
+
   public async deleteUserDataPermanently(userId: string) {
     this.state.users = this.state.users.filter(u => u.id !== userId && u._id !== userId);
     this.state.diaries = this.state.diaries.filter(d => d.userId !== userId);
@@ -838,6 +973,7 @@ Refined transformation matching ${s.name}.
     this.state.books = this.state.books.filter(b => b.userId !== userId);
     this.state.chapters = this.state.chapters.filter(c => c.userId !== userId);
     this.state.skills = this.state.skills.filter(s => s.userId !== userId);
+    this.state.ideas = this.state.ideas.filter(i => i.userId !== userId);
     this.state.chats = this.state.chats.filter(c => c.userId !== userId);
     this.state.messages = this.state.messages.filter(m => m.userId !== userId);
     this.persist();
@@ -850,6 +986,7 @@ Refined transformation matching ${s.name}.
     const plans = this.state.plans.filter(p => p.userId === userId);
     const books = this.state.books.filter(b => b.userId === userId);
     const chapters = this.state.chapters.filter(c => c.userId === userId);
+    const ideas = this.state.ideas.filter(i => i.userId === userId);
 
     const totalDiaryWords = diaries.reduce((acc, d) => acc + (d.wordCount || 0), 0);
     const totalBookWords = chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0);
@@ -862,6 +999,7 @@ Refined transformation matching ${s.name}.
       totalPlans: plans.length,
       totalBooks: books.length,
       totalChapters: chapters.length,
+      totalIdeas: ideas.length,
       totalWords: totalDiaryWords + totalBookWords,
       totalTasks: allTasks.length,
       completedTasks,

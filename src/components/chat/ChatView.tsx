@@ -13,12 +13,18 @@ import {
   X,
   Check,
   Copy,
-  Edit2
+  Edit2,
+  Play,
+  BookOpen,
+  ListTodo,
+  AlertCircle,
+  Lightbulb
 } from 'lucide-react';
 
 const CHAT_MODES = [
   { id: 'default', label: 'Default', desc: 'General conversational assistant' },
   { id: 'diary', label: 'Diary Mode', desc: 'Reflective companion & journal drafting' },
+  { id: 'idea', label: 'Ideas Mode', desc: 'Brainstorm, validate & structure concepts' },
   { id: 'plan', label: 'Plan Mode', desc: 'Strategic breakdown & task harvesting' },
   { id: 'book', label: 'Book Mode', desc: 'Narrative expansion & chapter sculpting' },
 ] as const;
@@ -827,10 +833,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Action Proposal Card (Approval Flow) */}
                     {!isUser && msg.actionProposal && (() => {
                       const proposalType = String(msg.actionProposal.type || '').toLowerCase();
+                      const isIdea = proposalType.includes('idea');
                       const isPlan = proposalType.includes('plan');
                       const isChapter = proposalType.includes('chapter') || proposalType.includes('book');
                       const isSkill = proposalType.includes('skill');
-                      const isDiary = !isPlan && !isChapter && !isSkill;
+                      const isDiary = !isIdea && !isPlan && !isChapter && !isSkill;
 
                       const diaryDate = msg.actionProposal.data?.date || getTodayDateString();
 
@@ -858,7 +865,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       }
 
                       const isBengaliEntry = /[\u0980-\u09FF]/.test(entryContent);
-                      const entryTitle = isDiary
+                      const entryTitle = isIdea
+                        ? (msg.actionProposal.data?.title || 'Structured Idea Concept')
+                        : isDiary
                         ? (msg.actionProposal.data?.title && !msg.actionProposal.data.title.startsWith('Journal: 202')
                             ? msg.actionProposal.data.title
                             : (isBengaliEntry ? 'আত্মোপলব্ধি ও ভাবনার নতুন দিগন্ত' : `Reflections: ${diaryDate}`))
@@ -870,7 +879,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         ? (msg.actionProposal.data?.name || 'Custom AI Skill')
                         : (msg.actionProposal.targetName || 'Journal Entry');
 
-                      const proposalLabel = isDiary
+                      const proposalLabel = isIdea
+                        ? 'Idea Architecture (9 Sections)'
+                        : isDiary
                         ? 'Journal Entry Proposal'
                         : isPlan
                         ? 'Action Plan Breakdown'
@@ -914,6 +925,31 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 <p className="text-[10px] text-neutral-400 font-mono pt-1">
                                   ↳ Added to this day's journal (previous writing is preserved)
                                 </p>
+                              </div>
+                            )}
+
+                            {isIdea && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-100 mb-1">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <Lightbulb className="w-3.5 h-3.5 text-neutral-800 shrink-0" />
+                                    <p className="font-semibold text-neutral-900 text-xs sm:text-sm truncate">
+                                      {entryTitle}
+                                    </p>
+                                  </div>
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 shrink-0">
+                                    {msg.actionProposal.data?.category || 'Tech & AI'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-neutral-700 whitespace-pre-wrap leading-relaxed line-clamp-3">
+                                  {msg.actionProposal.data?.sections?.overview || msg.actionProposal.data?.sections?.problemAndSolution || 'Idea structured across 9 key strategic sections.'}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono text-neutral-500">
+                                  <span className="bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-700 font-semibold">9 Structured Sections</span>
+                                  {msg.actionProposal.data?.tags?.slice(0, 3).map((t: string) => (
+                                    <span key={t} className="bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-600">#{t}</span>
+                                  ))}
+                                </div>
                               </div>
                             )}
 
@@ -986,22 +1022,86 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     })()}
                   </div>
 
-                  {/* Minimal Assistant Action Row */}
-                  {!isUser && (
-                    <div className="flex items-center gap-2 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Action Row for Assistant and User Messages */}
+                  <div className={`flex items-center gap-1.5 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity relative ${isUser ? 'justify-end' : 'justify-start'}`}>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(msg.content, msgId)}
+                      className="p-1 text-neutral-400 hover:text-neutral-700 rounded transition-colors cursor-pointer"
+                      title="Copy text"
+                    >
+                      {copiedId === msgId ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    {/* Run Skill on Message Content */}
+                    <div className="relative">
                       <button
-                        onClick={() => handleCopyText(msg.content, msgId)}
-                        className="p-1 text-neutral-400 hover:text-neutral-700 rounded transition-colors cursor-pointer"
-                        title="Copy text"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMessageSkillMenuId(messageSkillMenuId === msgId ? null : msgId);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:text-neutral-900 bg-white/80 hover:bg-neutral-100 border border-neutral-200/80 rounded-md transition-colors cursor-pointer shadow-2xs"
+                        title="Run an AI Skill on this entire message"
                       >
-                        {copiedId === msgId ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
+                        <Sparkles className="w-3 h-3 text-neutral-600" />
+                        <span>Run Skill</span>
+                        <ChevronDown className="w-2.5 h-2.5 opacity-60" />
                       </button>
+
+                      {messageSkillMenuId === msgId && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className={`absolute ${isUser ? 'right-0' : 'left-0'} top-full mt-1 w-64 max-h-60 overflow-y-auto bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 z-40 text-neutral-900 animate-in fade-in duration-150`}
+                        >
+                          <div className="px-3 py-1 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 flex items-center justify-between">
+                            <span>Execute on Message</span>
+                            <span className="font-mono text-[9px]">{availableSkills.length} available</span>
+                          </div>
+
+                          {availableSkills.length === 0 ? (
+                            <div className="px-3 py-3 text-xs text-neutral-500 text-center">
+                              <p>No saved skills yet.</p>
+                              <p className="text-[10px] text-neutral-400 mt-0.5">Create one in Skills Studio</p>
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-neutral-50">
+                              {availableSkills.map((sk) => (
+                                <button
+                                  key={sk.id || sk._id}
+                                  type="button"
+                                  onClick={() => {
+                                    setMessageSkillMenuId(null);
+                                    handleExecuteSkill(sk, msg.content);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-neutral-50 transition-colors cursor-pointer flex items-start gap-2 group/item"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5 text-neutral-400 group-hover/item:text-neutral-900 mt-0.5 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <p className="text-xs font-medium text-neutral-900 truncate">{sk.name}</p>
+                                      {sk.category && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600 font-mono shrink-0">
+                                          {sk.category}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
+                                      {sk.description || 'Custom LifeNote skill'}
+                                    </p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
@@ -1477,6 +1577,76 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </div>
                 </>
               )}
+
+              {(proposalModal.proposal.type === 'create_idea' || proposalModal.proposal.type === 'update_idea') && (
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">Idea Title</label>
+                      <input
+                        type="text"
+                        value={proposalModal.editableData.title || ''}
+                        onChange={(e) => setProposalModal({
+                          ...proposalModal,
+                          editableData: { ...proposalModal.editableData, title: e.target.value }
+                        })}
+                        className="w-full px-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">Category</label>
+                      <select
+                        value={proposalModal.editableData.category || 'Tech & AI'}
+                        onChange={(e) => setProposalModal({
+                          ...proposalModal,
+                          editableData: { ...proposalModal.editableData, category: e.target.value }
+                        })}
+                        className="w-full px-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none bg-white"
+                      >
+                        <option value="Tech & AI">Tech & AI</option>
+                        <option value="Business">Business</option>
+                        <option value="Productivity">Productivity</option>
+                        <option value="Creative">Creative</option>
+                        <option value="Social">Social</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* 9 Structured Sections */}
+                  {[
+                    { key: 'overview', label: '1. Overview', rows: 2 },
+                    { key: 'problemAndSolution', label: '2. Problem & Solution', rows: 2 },
+                    { key: 'targetAudience', label: '3. Target Audience', rows: 2 },
+                    { key: 'features', label: '4. Features', rows: 2 },
+                    { key: 'businessModel', label: '5. Business Model', rows: 2 },
+                    { key: 'competitors', label: '6. Competitors', rows: 2 },
+                    { key: 'implementationPlan', label: '7. Implementation Plan', rows: 2 },
+                    { key: 'risks', label: '8. Risks', rows: 2 },
+                    { key: 'improvementOpportunities', label: '9. Improvement Opportunities', rows: 2 },
+                  ].map((sec) => (
+                    <div key={sec.key}>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">{sec.label}</label>
+                      <textarea
+                        rows={sec.rows}
+                        value={proposalModal.editableData.sections?.[sec.key] || ''}
+                        onChange={(e) => setProposalModal({
+                          ...proposalModal,
+                          editableData: {
+                            ...proposalModal.editableData,
+                            sections: {
+                              ...(proposalModal.editableData.sections || {}),
+                              [sec.key]: e.target.value,
+                            }
+                          }
+                        })}
+                        className="w-full px-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none leading-relaxed"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
@@ -1510,6 +1680,236 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
         );
       })()}
+
+      {/* Floating Toolbar on Text Selection */}
+      {selectedSnippet && selectionCoords && (
+        <div
+          className="fixed z-50 -translate-x-1/2 -translate-y-full bg-neutral-900 text-white shadow-2xl rounded-full px-3 py-1.5 flex items-center gap-2 border border-neutral-700 text-xs select-none animate-in fade-in zoom-in-95 duration-150"
+          style={{ left: `${selectionCoords.x}px`, top: `${selectionCoords.y}px` }}
+        >
+          <span className="text-[10px] text-neutral-400 font-mono max-w-[120px] truncate">
+            "{selectedSnippet}"
+          </span>
+          <div className="w-[1px] h-3.5 bg-neutral-700" />
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectionSkillMenuOpen(v => !v);
+              }}
+              className="flex items-center gap-1 font-semibold text-amber-300 hover:text-amber-200 transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Run Skill</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+
+            {selectionSkillMenuOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute left-0 bottom-full mb-2 w-64 max-h-64 overflow-y-auto bg-white border border-neutral-200 rounded-xl shadow-2xl py-1.5 z-50 text-neutral-900 animate-in fade-in slide-in-from-bottom-2 duration-150"
+              >
+                <div className="px-3 py-1 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 flex items-center justify-between">
+                  <span>Run on Selection</span>
+                  <span className="font-mono text-[9px]">{availableSkills.length} available</span>
+                </div>
+                {availableSkills.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-neutral-500 text-center">
+                    No skills created yet
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-50">
+                    {availableSkills.map((sk) => (
+                      <button
+                        key={sk.id || sk._id}
+                        type="button"
+                        onClick={() => {
+                          setSelectionSkillMenuOpen(false);
+                          handleExecuteSkill(sk, selectedSnippet);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-neutral-50 transition-colors cursor-pointer flex items-start gap-2 group/item"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-neutral-400 group-hover/item:text-neutral-900 mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-neutral-900 truncate">{sk.name}</p>
+                          <p className="text-[10px] text-neutral-500 line-clamp-1">{sk.description || 'Custom Skill'}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="w-[1px] h-3.5 bg-neutral-700" />
+
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(selectedSnippet);
+              setSelectedSnippet('');
+              setSelectionCoords(null);
+            }}
+            className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-0.5"
+            title="Copy selected text"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedSnippet('');
+              setSelectionCoords(null);
+              setSelectionSkillMenuOpen(false);
+            }}
+            className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-0.5"
+            title="Close selection pill"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Skill Execution Review & User Approval Modal */}
+      {skillReview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full border border-neutral-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-neutral-900 text-sm">
+                      Skill Execution: {skillReview.skillName}
+                    </h3>
+                    {skillReview.durationMs && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-mono">
+                        {(skillReview.durationMs / 1000).toFixed(2)}s
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-neutral-500">
+                    Review and edit output before approving modification of saved content
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSkillReview(null)}
+                className="text-neutral-400 hover:text-neutral-700 p-1 rounded-md transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              {/* Source Text Input */}
+              <div>
+                <label className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">
+                  Source Text / Context
+                </label>
+                <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-700 font-mono max-h-24 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                  {skillReview.inputText}
+                </div>
+              </div>
+
+              {/* Execution Status / Editable Output */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-semibold text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Generated Output</span>
+                    <span className="text-[10px] font-normal text-neutral-400 lowercase">(editable prior to save)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(skillReview.editableOutput);
+                    }}
+                    className="text-[11px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </button>
+                </div>
+
+                {skillReview.executing ? (
+                  <div className="py-12 border border-dashed border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center gap-2 bg-neutral-50/50">
+                    <div className="w-6 h-6 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs font-medium text-neutral-800">
+                      Executing skill "{skillReview.skillName}"...
+                    </p>
+                    <p className="text-[11px] text-neutral-400">Applying prompt template & constraints</p>
+                  </div>
+                ) : (
+                  <textarea
+                    rows={8}
+                    value={skillReview.editableOutput}
+                    onChange={(e) => setSkillReview({
+                      ...skillReview,
+                      editableOutput: e.target.value
+                    })}
+                    placeholder="Skill output will appear here..."
+                    className="w-full p-3 text-xs sm:text-sm text-neutral-900 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-neutral-400 font-sans leading-relaxed resize-y"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* User Approval & Save Action Bar */}
+            <div className="px-5 py-3.5 bg-neutral-50/80 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setSkillReview(null)}
+                className="px-3 py-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 cursor-pointer"
+              >
+                Dismiss
+              </button>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={skillReview.executing || !skillReview.editableOutput}
+                  onClick={() => {
+                    setMessageInput(prev => prev ? `${prev}\n\n${skillReview.editableOutput}` : skillReview.editableOutput);
+                    setSkillReview(null);
+                  }}
+                  className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  title="Insert this refined text into the chat composer"
+                >
+                  Insert in Composer
+                </button>
+
+                <button
+                  type="button"
+                  disabled={skillReview.executing || !skillReview.editableOutput || applyingAction}
+                  onClick={handleSaveSkillOutputToDiary}
+                  className="px-3 py-1.5 text-xs font-medium text-neutral-800 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-neutral-600" />
+                  <span>Save to Journal</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={skillReview.executing || !skillReview.editableOutput || applyingAction}
+                  onClick={handleSaveSkillOutputToPlan}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-black rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                >
+                  <ListTodo className="w-3.5 h-3.5" />
+                  <span>Save as Plan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

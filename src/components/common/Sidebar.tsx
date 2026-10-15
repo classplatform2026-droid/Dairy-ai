@@ -16,7 +16,8 @@ import {
   Plus,
   ChevronRight,
   ShieldCheck,
-  Trash2
+  Trash2,
+  Lightbulb
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -61,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'diary', label: 'Diary', icon: PenLine },
     { id: 'reader', label: 'Library & Bookshelf', icon: BookMarked },
+    { id: 'ideas', label: 'Ideas Studio', icon: Lightbulb },
     { id: 'plans', label: 'Plans & Goals', icon: CheckSquare },
     { id: 'books', label: 'Books & Chapters', icon: BookOpen },
     { id: 'skills', label: 'Skills Library', icon: Sparkles },

@@ -13,7 +13,8 @@ import {
   Check,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Lightbulb
 } from 'lucide-react';
 import { DiaryEntry, Plan, Book, Chat } from '../../types/index.js';
 import { formatShortDate } from '../../utils/date.js';
@@ -28,6 +29,7 @@ interface DashboardViewProps {
 const MODES = [
   { id: 'default', label: 'Default', desc: 'General conversational assistant' },
   { id: 'diary', label: 'Diary Mode', desc: 'Reflective thoughts & journaling' },
+  { id: 'idea', label: 'Ideas Mode', desc: 'Brainstorm & structure concepts' },
   { id: 'plan', label: 'Plan Mode', desc: 'Strategic breakdowns & task lists' },
   { id: 'book', label: 'Book Mode', desc: 'Manuscripts & story crafting' },
 ] as const;
@@ -47,7 +49,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Input composer state
   const [prompt, setPrompt] = useState('');
-  const [selectedMode, setSelectedMode] = useState<'default' | 'diary' | 'plan' | 'book'>('default');
+  const [selectedMode, setSelectedMode] = useState<'default' | 'diary' | 'idea' | 'plan' | 'book'>('default');
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -240,6 +242,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span>Add Book</span>
                 </button>
                 <div className="border-t border-neutral-100 my-1" />
+                <button
+                  type="button"
+                  onClick={() => { setPlusMenuOpen(false); onNavigate('ideas', { createNew: true }); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg text-left cursor-pointer transition-colors"
+                >
+                  <Lightbulb className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>New Idea</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => { setPlusMenuOpen(false); onNavigate('skills'); }}
