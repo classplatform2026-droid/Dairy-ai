@@ -60,7 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const primaryNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'diary', label: 'Diary', icon: PenLine },
-    { id: 'reader', label: 'Reader Mode', icon: BookMarked },
+    { id: 'reader', label: 'Library & Bookshelf', icon: BookMarked },
     { id: 'plans', label: 'Plans & Goals', icon: CheckSquare },
     { id: 'books', label: 'Books & Chapters', icon: BookOpen },
     { id: 'skills', label: 'Skills Library', icon: Sparkles },

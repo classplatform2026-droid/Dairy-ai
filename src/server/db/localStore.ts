@@ -489,14 +489,101 @@ class LocalStore {
 
   // --- Skills ---
   public async getSkills(userId?: string) {
-    return this.state.skills.filter(s => s.isSystem || (userId && s.userId === userId));
+    const list = this.state.skills.filter(s => s.isSystem || (userId && s.userId === userId));
+    return list.map(s => {
+      if (!s.skillMd) {
+        s.skillMd = this.generateDefaultSkillMd(s);
+      }
+      if (!s.version) {
+        s.version = 1;
+      }
+      return s;
+    });
   }
 
   public async getSkillById(id: string, userId?: string) {
-    return this.state.skills.find(s => (s.id === id || s._id === id) && (s.isSystem || s.userId === userId)) || null;
+    const s = this.state.skills.find(item => (item.id === id || item._id === id) && (item.isSystem || item.userId === userId));
+    if (!s) return null;
+    if (!s.skillMd) {
+      s.skillMd = this.generateDefaultSkillMd(s);
+    }
+    if (!s.version) {
+      s.version = 1;
+    }
+    return s;
+  }
+
+  private generateDefaultSkillMd(s: any): string {
+    const vars = Array.isArray(s.variables) && s.variables.length > 0 ? s.variables : ['text'];
+    const tags = Array.isArray(s.tags) && s.tags.length > 0 ? s.tags : [s.category ? s.category.toLowerCase() : 'custom'];
+    return `---
+name: "${(s.name || 'Custom Skill').replace(/"/g, '\\"')}"
+description: "${(s.description || '').replace(/"/g, '\\"')}"
+category: "${s.category || 'Writing'}"
+version: "1.0.0"
+inputs:
+${vars.map((v: string) => `  - ${v}`).join('\n')}
+tags:
+${tags.map((t: string) => `  - ${t}`).join('\n')}
+icon: "${s.icon || 'Sparkles'}"
+---
+
+# ${s.name || 'Custom Skill'}
+
+## Purpose
+${s.description || 'Custom cognitive skill for LifeNote AI.'}
+
+## Use Cases
+- Personal journaling and reflective writing
+- Structured text enhancement and clarity refinement
+
+## Required Inputs
+${vars.map((v: string) => `- \`${v}\`: Input text to be transformed according to instructions.`).join('\n')}
+
+## Step-by-Step Workflow
+1. Analyze the core message, tone, and intended impact of the input text.
+2. Apply the specialized cognitive prompt template:
+\`\`\`
+${s.promptTemplate || 'Transform the text.'}
+\`\`\`
+3. Refine for stylistic harmony and verify all constraints.
+4. Output the result cleanly.
+
+## Constraints & Rules
+- Preserve the authentic thoughts, facts, and voice of the author.
+- If the original text is in Bengali or Banglish, produce polished, natural Bengali.
+- Output ONLY the refined result without unnecessary conversational preamble.
+
+## Examples
+### Example 1
+**Input:**
+\`\`\`
+Sample text provided for processing.
+\`\`\`
+
+**Output:**
+\`\`\`
+Refined transformation matching ${s.name}.
+\`\`\`
+
+## Edge Cases
+- When input is brief, deepen the insight thoughtfully while retaining accuracy.
+`;
   }
 
   public async createSkill(userId: string, data: any) {
+    const now = new Date().toISOString();
+    const vars = data.variables && data.variables.length > 0 ? data.variables : ['text'];
+    const skillMd = data.skillMd || this.generateDefaultSkillMd({
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      promptTemplate: data.promptTemplate,
+      variables: vars,
+      tags: data.tags,
+      icon: data.icon,
+    });
+
     const skill = {
       id: this.generateId(),
       userId,
@@ -504,12 +591,24 @@ class LocalStore {
       name: data.name,
       category: data.category || 'Writing',
       description: data.description,
+      skillMd,
       promptTemplate: data.promptTemplate,
-      variables: data.variables || ['text'],
+      variables: vars,
       tags: data.tags || [],
       icon: data.icon || 'Sparkles',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      version: 1,
+      versionHistory: [
+        {
+          version: 1,
+          skillMd,
+          promptTemplate: data.promptTemplate,
+          changeNote: 'Initial skill creation',
+          savedAt: now,
+        }
+      ],
+      executionHistory: [],
+      createdAt: now,
+      updatedAt: now,
     };
     this.state.skills.push(skill);
     this.persist();
@@ -519,13 +618,82 @@ class LocalStore {
   public async updateSkill(userId: string, id: string, updates: any) {
     const idx = this.state.skills.findIndex(s => (s.id === id || s._id === id) && s.userId === userId && !s.isSystem);
     if (idx === -1) return null;
+    const existing = this.state.skills[idx];
+    const now = new Date().toISOString();
+
+    const isMajorChange = updates.skillMd !== undefined && updates.skillMd !== existing.skillMd;
+    const newVersion = isMajorChange ? (existing.version || 1) + 1 : (existing.version || 1);
+
+    const versionHistory = [...(existing.versionHistory || [])];
+    if (isMajorChange) {
+      versionHistory.unshift({
+        version: newVersion,
+        skillMd: updates.skillMd,
+        promptTemplate: updates.promptTemplate || existing.promptTemplate,
+        changeNote: updates.changeNote || `Updated to version ${newVersion}`,
+        savedAt: now,
+      });
+    }
+
     this.state.skills[idx] = {
-      ...this.state.skills[idx],
+      ...existing,
       ...updates,
-      updatedAt: new Date().toISOString(),
+      version: newVersion,
+      versionHistory,
+      updatedAt: now,
     };
     this.persist();
     return this.state.skills[idx];
+  }
+
+  public async recordSkillExecution(userId: string, id: string, execution: {
+    input: string;
+    output: string;
+    model: string;
+    durationMs: number;
+    status: string;
+  }) {
+    const idx = this.state.skills.findIndex(s => (s.id === id || s._id === id) && (s.isSystem || s.userId === userId));
+    if (idx === -1) return null;
+
+    const entry = {
+      id: 'exec_' + Math.random().toString(36).substr(2, 9),
+      ...execution,
+      executedAt: new Date().toISOString(),
+    };
+
+    const currentHistory = this.state.skills[idx].executionHistory || [];
+    // Keep last 30 execution logs
+    this.state.skills[idx].executionHistory = [entry, ...currentHistory].slice(0, 30);
+    this.persist();
+    return entry;
+  }
+
+  public async restoreSkillVersion(userId: string, id: string, versionNumber: number) {
+    const idx = this.state.skills.findIndex(s => (s.id === id || s._id === id) && s.userId === userId && !s.isSystem);
+    if (idx === -1) return null;
+    const skill = this.state.skills[idx];
+    const targetSnapshot = (skill.versionHistory || []).find((v: any) => v.version === versionNumber);
+    if (!targetSnapshot) return null;
+
+    const now = new Date().toISOString();
+    const restoredVersion = (skill.version || 1) + 1;
+
+    skill.versionHistory.unshift({
+      version: restoredVersion,
+      skillMd: targetSnapshot.skillMd,
+      promptTemplate: targetSnapshot.promptTemplate,
+      changeNote: `Restored from version ${versionNumber}`,
+      savedAt: now,
+    });
+
+    skill.skillMd = targetSnapshot.skillMd;
+    skill.promptTemplate = targetSnapshot.promptTemplate;
+    skill.version = restoredVersion;
+    skill.updatedAt = now;
+
+    this.persist();
+    return skill;
   }
 
   public async deleteSkill(userId: string, id: string) {

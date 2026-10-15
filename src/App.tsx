@@ -101,7 +101,13 @@ function MainApp() {
           )}
 
           {currentView === 'reader' && (
-            <DiaryReaderView onBack={() => handleNavigate('diary')} />
+            <DiaryReaderView
+              onBack={() => handleNavigate('dashboard')}
+              initialBookId={viewParams?.bookId || viewParams?.selectedId}
+              initialType={viewParams?.type}
+              onNavigateToBooks={() => handleNavigate('books')}
+              onNavigateToDiary={() => handleNavigate('diary')}
+            />
           )}
 
           {currentView === 'plans' && (
@@ -112,11 +118,19 @@ function MainApp() {
             <BooksView
               initialBookId={viewParams?.selectedId}
               initialCreateNew={viewParams?.createNew}
+              onOpenReader={(bookId) => handleNavigate('reader', { bookId, type: 'book' })}
             />
           )}
 
           {currentView === 'skills' && (
-            <SkillsView />
+            <SkillsView
+              onNavigateToChat={(skillId, skillName) => {
+                handleNavigate('chat', {
+                  initialPrompt: skillName ? `Apply "${skillName}" skill to:` : undefined,
+                  skillId,
+                });
+              }}
+            />
           )}
 
           {currentView === 'chat' && (
@@ -144,7 +158,7 @@ function MainApp() {
           <div className="flex items-center gap-4">
             <button onClick={() => handleNavigate('dashboard')} className="hover:text-neutral-900 cursor-pointer">Dashboard</button>
             <span>·</span>
-            <button onClick={() => handleNavigate('reader')} className="hover:text-neutral-900 cursor-pointer">Reader Mode</button>
+            <button onClick={() => handleNavigate('reader')} className="hover:text-neutral-900 cursor-pointer">Library & Bookshelf</button>
             <span>·</span>
             <button onClick={() => handleNavigate('skills')} className="hover:text-neutral-900 cursor-pointer">Skills</button>
             <span>·</span>

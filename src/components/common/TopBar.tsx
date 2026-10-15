@@ -30,7 +30,7 @@ interface TopBarProps {
 const VIEW_TITLES: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview & recent reflections' },
   diary: { title: 'Personal Diary', subtitle: 'Daily logs & thoughts' },
-  reader: { title: 'Reading Room', subtitle: 'Distraction-free life book' },
+  reader: { title: 'Library & Bookshelf', subtitle: 'Book covers & reading room' },
   plans: { title: 'Action Plans', subtitle: 'Goals, checklists & deadlines' },
   books: { title: 'Books & Manuscripts', subtitle: 'Long-form chapters & works' },
   skills: { title: 'Skills Library', subtitle: 'Reusable intelligence prompts' },
@@ -319,7 +319,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   className="w-full text-left px-3.5 py-2 text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>Diary Reader Mode</span>
+                  <span>Library & Bookshelf</span>
                 </button>
               </div>
 

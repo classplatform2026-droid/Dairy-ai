@@ -117,6 +117,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [applyingAction, setApplyingAction] = useState(false);
   const [applySuccessNotice, setApplySuccessNotice] = useState<string | null>(null);
 
+  // Skill Execution on Text Selection / Message
+  const [selectedSnippet, setSelectedSnippet] = useState('');
+  const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
+  const [selectionSkillMenuOpen, setSelectionSkillMenuOpen] = useState(false);
+  const [messageSkillMenuId, setMessageSkillMenuId] = useState<string | null>(null);
+  const [skillReview, setSkillReview] = useState<{
+    skillId: string;
+    skillName: string;
+    inputText: string;
+    output: string;
+    editableOutput: string;
+    durationMs?: number;
+    model?: string;
+    executing: boolean;
+  } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const modeMenuRef = useRef<HTMLDivElement>(null);
@@ -132,10 +148,47 @@ export const ChatView: React.FC<ChatViewProps> = ({
       if (modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) {
         setModeMenuOpen(false);
       }
+      if (messageSkillMenuId) {
+        setMessageSkillMenuId(null);
+      }
     };
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, []);
+  }, [messageSkillMenuId]);
+
+  // Handle Text Selection in Messages for floating Skill Runner
+  useEffect(() => {
+    const handleMouseUp = () => {
+      setTimeout(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) {
+          if (!selectionSkillMenuOpen) {
+            setSelectedSnippet('');
+            setSelectionCoords(null);
+          }
+          return;
+        }
+
+        const text = sel.toString().trim();
+        if (text.length >= 3) {
+          try {
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            setSelectedSnippet(text);
+            setSelectionCoords({
+              x: Math.max(20, rect.left + rect.width / 2),
+              y: Math.max(20, rect.top - 8),
+            });
+          } catch {
+            setSelectedSnippet(text);
+          }
+        }
+      }, 50);
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [selectionSkillMenuOpen]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -460,6 +513,119 @@ export const ChatView: React.FC<ChatViewProps> = ({
       loadAttachableResources();
     } catch (err: any) {
       console.error('Failed to apply proposal:', err);
+    } finally {
+      setApplyingAction(false);
+    }
+  };
+
+  // Execute skill on selected text or full message
+  const handleExecuteSkill = async (skill: any, text: string) => {
+    if (!text || !text.trim()) return;
+    const sId = skill.id || skill._id;
+    setSkillReview({
+      skillId: sId,
+      skillName: skill.name,
+      inputText: text.trim(),
+      output: '',
+      editableOutput: '',
+      executing: true,
+    });
+    setSelectionSkillMenuOpen(false);
+    setMessageSkillMenuId(null);
+    setSelectedSnippet('');
+    setSelectionCoords(null);
+
+    try {
+      const res = await api.skills.test(sId, { input: text.trim() });
+      setSkillReview({
+        skillId: sId,
+        skillName: skill.name,
+        inputText: text.trim(),
+        output: res.output,
+        editableOutput: res.output,
+        durationMs: res.durationMs,
+        model: res.model,
+        executing: false,
+      });
+    } catch (err: any) {
+      console.error('Skill execution failed:', err);
+      setSkillReview({
+        skillId: sId,
+        skillName: skill.name,
+        inputText: text.trim(),
+        output: `Execution failed: ${err.message || 'Unknown error'}`,
+        editableOutput: text.trim(),
+        executing: false,
+      });
+    }
+  };
+
+  // User Approval Flow: Save Approved Output to Today's Journal
+  const handleSaveSkillOutputToDiary = async () => {
+    if (!skillReview || !skillReview.editableOutput) return;
+    setApplyingAction(true);
+    const today = getTodayDateString();
+
+    try {
+      const existing = await api.diaries.getByDate(today).catch(() => null);
+      if (existing && existing.entry) {
+        const id = existing.entry.id || existing.entry._id;
+        const mergedContent = `${existing.entry.content}\n\n---\n[Refined via ${skillReview.skillName}]:\n${skillReview.editableOutput}`;
+        await api.diaries.update(id, { content: mergedContent });
+      } else {
+        await api.diaries.create({
+          title: `Reflections: ${today}`,
+          content: skillReview.editableOutput,
+          date: today,
+          mood: 'thoughtful',
+          weather: 'sunny',
+          tags: ['skill', skillReview.skillName.toLowerCase().replace(/\s+/g, '-')],
+        });
+      }
+
+      setApplySuccessNotice(`Approved output successfully saved to today's journal (${today})!`);
+      setSkillReview(null);
+      setTimeout(() => setApplySuccessNotice(null), 4000);
+      loadAttachableResources();
+    } catch (err: any) {
+      console.error('Failed to save skill output to diary:', err);
+      alert(`Save to diary failed: ${err.message || 'Error'}`);
+    } finally {
+      setApplyingAction(false);
+    }
+  };
+
+  // User Approval Flow: Save Approved Output as Plan Tasks
+  const handleSaveSkillOutputToPlan = async () => {
+    if (!skillReview || !skillReview.editableOutput) return;
+    setApplyingAction(true);
+
+    try {
+      const lines = skillReview.editableOutput
+        .split('\n')
+        .map(l => l.replace(/^[-*•\d.]+\s*/, '').trim())
+        .filter(Boolean);
+
+      const tasks = lines.slice(0, 10).map((t, idx) => ({
+        title: t,
+        completed: false,
+        order: idx + 1,
+      }));
+
+      await api.plans.create({
+        title: `${skillReview.skillName} Action Plan`,
+        description: skillReview.inputText.slice(0, 120),
+        category: 'Personal',
+        tasks: tasks.length > 0 ? tasks : [{ title: 'Review refined plan items', completed: false, order: 1 }],
+      });
+
+      setApplySuccessNotice(`Approved output saved as a new Action Plan!`);
+      setSkillReview(null);
+      setTimeout(() => setApplySuccessNotice(null), 4000);
+      loadAttachableResources();
+    } catch (err: any) {
+      console.error('Failed to save skill output to plan:', err);
+      alert(`Save to plan failed: ${err.message || 'Error'}`);
     } finally {
       setApplyingAction(false);
     }

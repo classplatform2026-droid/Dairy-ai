@@ -156,16 +156,38 @@ const ChapterSchema = new Schema<IChapter>({
 
 ChapterSchema.index({ bookId: 1, order: 1 });
 
+export interface ISkillVersion {
+  version: number;
+  skillMd: string;
+  promptTemplate: string;
+  changeNote?: string;
+  savedAt: string;
+}
+
+export interface ISkillExecution {
+  id: string;
+  input: string;
+  output: string;
+  model: string;
+  durationMs: number;
+  status: string;
+  executedAt: string;
+}
+
 export interface ISkill extends Document {
   userId?: string;
   isSystem: boolean;
   name: string;
   category: string;
   description: string;
+  skillMd?: string;
   promptTemplate: string;
   variables: string[];
   tags: string[];
   icon: string;
+  version?: number;
+  versionHistory?: ISkillVersion[];
+  executionHistory?: ISkillExecution[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -176,10 +198,28 @@ const SkillSchema = new Schema<ISkill>({
   name: { type: String, required: true },
   category: { type: String, default: 'Writing' },
   description: { type: String, required: true },
+  skillMd: { type: String, default: '' },
   promptTemplate: { type: String, required: true },
   variables: { type: [String], default: ['text'] },
   tags: { type: [String], default: [] },
   icon: { type: String, default: 'Sparkles' },
+  version: { type: Number, default: 1 },
+  versionHistory: [{
+    version: { type: Number, required: true },
+    skillMd: { type: String, required: true },
+    promptTemplate: { type: String, required: true },
+    changeNote: { type: String },
+    savedAt: { type: String, required: true },
+  }],
+  executionHistory: [{
+    id: { type: String, required: true },
+    input: { type: String, required: true },
+    output: { type: String, required: true },
+    model: { type: String, default: 'gemini-3.8-flash' },
+    durationMs: { type: Number, default: 0 },
+    status: { type: String, default: 'success' },
+    executedAt: { type: String, required: true },
+  }],
 }, { timestamps: true });
 
 export interface IChat extends Document {

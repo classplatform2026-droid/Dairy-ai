@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api.js';
 import { Skill } from '../../types/index.js';
+import { SkillCreatorModal } from './SkillCreatorModal.js';
+import { SkillDetailModal } from './SkillDetailModal.js';
 import {
   Sparkles,
   Plus,
@@ -15,32 +17,59 @@ import {
   BookOpen,
   Feather,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Upload,
+  Download,
+  Search,
+  MessageSquare,
+  History,
+  FileText,
+  Moon,
+  Sun,
+  Coffee,
+  Heart,
+  Flame,
+  Terminal,
+  Clock
 } from 'lucide-react';
 
-const CATEGORIES = ['All', 'Writing', 'Refinement', 'Planning', 'Summarization', 'Creative'];
+const CATEGORIES = ['All', 'Writing', 'Refinement', 'Planning', 'Summarization', 'Creative', 'Analysis'];
 
-export const SkillsView: React.FC = () => {
+const EMBLEM_ICONS: Record<string, React.FC<{ className?: string }>> = {
+  Sparkles,
+  Feather,
+  BookOpen,
+  Compass,
+  CheckCircle,
+  Moon,
+  Sun,
+  Coffee,
+  Heart,
+  Flame,
+  Terminal,
+  FileText,
+};
+
+interface SkillsViewProps {
+  onNavigateToChat?: (skillId?: string, skillName?: string) => void;
+}
+
+export const SkillsView: React.FC<SkillsViewProps> = ({ onNavigateToChat }) => {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Create / Edit modal
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Writing');
-  const [promptTemplate, setPromptTemplate] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
+  // Skill Creator Modal
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [creatorEditingSkill, setCreatorEditingSkill] = useState<Skill | null>(null);
 
-  // Execute modal / Playground
-  const [executeModalOpen, setExecuteModalOpen] = useState(false);
-  const [executingSkill, setExecutingSkill] = useState<Skill | null>(null);
-  const [inputText, setInputText] = useState('');
-  const [executing, setExecuting] = useState(false);
-  const [outputText, setOutputText] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Skill Detail Modal
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  // Import file ref
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchSkills = async () => {
     try {
@@ -59,380 +88,340 @@ export const SkillsView: React.FC = () => {
   }, []);
 
   const openCreateModal = () => {
-    setEditingSkill(null);
-    setName('');
-    setDescription('');
-    setCategory('Writing');
-    setPromptTemplate('Please review and transform the following text with careful attention to style and intent:\n\n"{text}"');
-    setTagsInput('custom, writing');
-    setModalOpen(true);
+    setCreatorEditingSkill(null);
+    setCreatorOpen(true);
   };
 
   const openEditModal = (s: Skill) => {
     if (s.isSystem) return;
-    setEditingSkill(s);
-    setName(s.name);
-    setDescription(s.description);
-    setCategory(s.category);
-    setPromptTemplate(s.promptTemplate);
-    setTagsInput(s.tags?.join(', ') || '');
-    setModalOpen(true);
+    setCreatorEditingSkill(s);
+    setCreatorOpen(true);
   };
 
-  const handleSaveSkill = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !promptTemplate.trim()) return;
+  const openSkillDetail = (s: Skill) => {
+    const id = s.id || (s as any)._id;
+    setSelectedSkillId(id);
+    setDetailModalOpen(true);
+  };
 
-    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
-
-    try {
-      if (editingSkill) {
-        const id = editingSkill.id || (editingSkill as any)._id;
-        const res = await api.skills.update(id, {
-          name,
-          description,
-          category,
-          promptTemplate,
-          tags,
-        });
-        setSkills(prev => prev.map(s => ((s.id || (s as any)._id) === id ? res.skill : s)));
-      } else {
-        const res = await api.skills.create({
-          name,
-          description,
-          category,
-          promptTemplate,
-          tags,
-        });
-        setSkills(prev => [...prev, res.skill]);
+  const handleSkillSaved = (savedSkill: Skill) => {
+    const id = savedSkill.id || (savedSkill as any)._id;
+    setSkills(prev => {
+      const exists = prev.some(s => (s.id || (s as any)._id) === id);
+      if (exists) {
+        return prev.map(s => ((s.id || (s as any)._id) === id ? savedSkill : s));
       }
-      setModalOpen(false);
-    } catch (err) {
-      console.error('Failed to save skill:', err);
-    }
+      return [savedSkill, ...prev];
+    });
   };
 
-  const handleDeleteSkill = async (s: Skill) => {
+  const handleDeleteSkill = async (s: Skill, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (s.isSystem) return;
     const id = s.id || (s as any)._id;
-    const confirm = window.confirm(`Delete skill "${s.name}"?`);
+    const confirm = window.confirm(`Permanently delete skill "${s.name}"?`);
     if (!confirm) return;
 
     try {
       await api.skills.delete(id);
       setSkills(prev => prev.filter(item => (item.id || (item as any)._id) !== id));
+      if (selectedSkillId === id) {
+        setDetailModalOpen(false);
+      }
     } catch (err) {
       console.error('Failed to delete skill:', err);
     }
   };
 
-  const openExecutePlayground = (s: Skill) => {
-    setExecutingSkill(s);
-    setInputText('');
-    setOutputText(null);
-    setCopied(false);
-    setExecuteModalOpen(true);
+  const handleExportSkill = (s: Skill, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const content = s.skillMd || `# ${s.name}\n\n${s.description}\n\n${s.promptTemplate}`;
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.SKILL.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleExecute = async () => {
-    if (!executingSkill || !inputText.trim()) return;
-    setExecuting(true);
-    setOutputText(null);
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    try {
-      const res = await api.ai.executeSkill(executingSkill.promptTemplate, inputText);
-      setOutputText(res.output);
-    } catch (err) {
-      console.error('Failed to execute skill:', err);
-    } finally {
-      setExecuting(false);
-    }
-  };
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const rawMarkdown = ev.target?.result as string;
+      if (!rawMarkdown) return;
 
-  const handleCopy = () => {
-    if (outputText) {
-      navigator.clipboard.writeText(outputText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+      try {
+        const parsed = await api.skills.parseMarkdown(rawMarkdown);
+        const res = await api.skills.create({
+          name: parsed.name,
+          description: parsed.description,
+          category: parsed.category,
+          promptTemplate: parsed.promptTemplate,
+          skillMd: rawMarkdown,
+          variables: parsed.variables,
+          tags: parsed.tags,
+          icon: parsed.icon,
+        });
+
+        if (res.skill) {
+          handleSkillSaved(res.skill);
+          openSkillDetail(res.skill);
+        }
+      } catch (err) {
+        console.error('Failed to import skill:', err);
+        alert('Could not parse the uploaded markdown file. Please verify its YAML frontmatter.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const filteredSkills = skills.filter(s => {
     if (selectedCategory !== 'All' && s.category !== selectedCategory) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchName = s.name.toLowerCase().includes(q);
+      const matchDesc = s.description.toLowerCase().includes(q);
+      const matchTags = (s.tags || []).some(t => t.toLowerCase().includes(q));
+      if (!matchName && !matchDesc && !matchTags) return false;
+    }
     return true;
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-150">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-neutral-200">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Skills Library</h1>
-          <p className="text-xs text-neutral-500">Reusable prompt templates and cognitive workflows for writing, synthesis, and planning</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">AI Skills & Creator</h1>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-neutral-900 text-white font-medium">
+              SKILL.md Native
+            </span>
+          </div>
+          <p className="text-xs text-neutral-500 mt-1 max-w-2xl leading-relaxed">
+            Create, version, and execute modular AI cognitive skills through conversational interviewing and structured SKILL.md specifications.
+          </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="px-3.5 py-2 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Create Skill</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {/* Hidden File Input for import */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".md,.txt"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3.5 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Import SKILL.md</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-black rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create AI Skill</span>
+          </button>
+        </div>
       </div>
 
-      {/* Category Pills */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
-              selectedCategory === cat
-                ? 'bg-neutral-900 text-white'
-                : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer shrink-0 ${
+                selectedCategory === cat
+                  ? 'bg-neutral-900 text-white font-semibold'
+                  : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Search Input */}
+        <div className="relative w-full sm:w-64">
+          <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search skills, tags..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          />
+        </div>
       </div>
 
       {/* Skills Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-44 bg-neutral-100 rounded-xl animate-pulse" />
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-48 bg-neutral-100 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : filteredSkills.length === 0 ? (
-        <div className="p-12 text-center border border-neutral-200 rounded-xl bg-white">
-          <p className="text-xs text-neutral-500">No skills found in this category.</p>
+        <div className="p-16 text-center border border-dashed border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
+          <Sparkles className="w-8 h-8 text-neutral-300 mx-auto" />
+          <p className="text-sm font-semibold text-neutral-800">No skills found</p>
+          <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+            {searchQuery ? 'Try clearing your search query.' : 'Click "Create AI Skill" to design your first custom cognitive skill with the AI Architect.'}
+          </p>
+          {!searchQuery && (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="mt-2 px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-black rounded-lg transition-colors"
+            >
+              Create First Skill
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSkills.map(skill => (
-            <div
-              key={skill.id || (skill as any)._id}
-              className="p-5 border border-neutral-200 hover:border-neutral-300 rounded-xl bg-white shadow-xs flex flex-col justify-between transition-all"
-            >
-              <div>
-                <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span>{skill.category}</span>
-                    {skill.isSystem ? (
-                      <>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-mono text-[10px] text-neutral-500">System Built-In</span>
-                      </>
+          {filteredSkills.map(skill => {
+            const IconComponent = EMBLEM_ICONS[skill.icon] || Sparkles;
+            const skillId = skill.id || (skill as any)._id;
+
+            return (
+              <div
+                key={skillId}
+                onClick={() => openSkillDetail(skill)}
+                className="p-5 border border-neutral-200/90 hover:border-neutral-300 rounded-2xl bg-white shadow-xs hover:shadow-sm flex flex-col justify-between transition-all cursor-pointer group"
+              >
+                <div>
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between text-xs text-neutral-400 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center shrink-0">
+                        <IconComponent className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-medium text-neutral-700">{skill.category}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600">
+                        v{skill.version || 1}.0.0
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {skill.isSystem ? (
+                        <span className="text-[10px] font-mono text-neutral-400">System Built-In</span>
+                      ) : (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(skill);
+                            }}
+                            className="p-1 text-neutral-400 hover:text-neutral-800 rounded transition-colors"
+                            title="Edit specification"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteSkill(skill, e)}
+                            className="p-1 text-neutral-400 hover:text-red-600 rounded transition-colors"
+                            title="Delete skill"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Title & Description */}
+                  <h3 className="font-bold text-neutral-900 text-sm mb-1.5 group-hover:text-black">
+                    {skill.name}
+                  </h3>
+                  <p className="text-xs text-neutral-600 line-clamp-3 leading-relaxed mb-4">
+                    {skill.description}
+                  </p>
+                </div>
+
+                {/* Card Footer */}
+                <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {skill.tags && skill.tags.length > 0 ? (
+                      skill.tags.slice(0, 2).map((t, tidx) => (
+                        <span key={tidx} className="text-[10px] font-mono text-neutral-500 bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-100">
+                          #{t}
+                        </span>
+                      ))
                     ) : (
-                      <>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-mono text-[10px] text-neutral-500">Custom</span>
-                      </>
+                      <span className="text-[10px] font-mono text-neutral-400">#cognitive</span>
                     )}
                   </div>
 
-                  {!skill.isSystem && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openEditModal(skill)}
-                        className="p-1 text-neutral-400 hover:text-neutral-700 cursor-pointer"
-                        title="Edit skill"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSkill(skill)}
-                        className="p-1 text-neutral-400 hover:text-red-600 cursor-pointer"
-                        title="Delete skill"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => handleExportSkill(skill, e)}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-800 rounded-md transition-colors"
+                      title="Export SKILL.md"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openSkillDetail(skill);
+                      }}
+                      className="px-2.5 py-1 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-900 hover:text-white rounded-lg transition-colors flex items-center gap-1"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      <span>Test</span>
+                    </button>
+                  </div>
                 </div>
-
-                <h3 className="font-bold text-neutral-900 text-sm mb-1">{skill.name}</h3>
-                <p className="text-xs text-neutral-600 line-clamp-3 leading-relaxed mb-4">
-                  {skill.description}
-                </p>
               </div>
-
-              <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
-                <span className="text-[11px] text-neutral-400 font-mono">
-                  {skill.tags && skill.tags.length > 0 ? skill.tags.map(t => `#${t}`).join(' ') : '{text}'}
-                </span>
-
-                <button
-                  onClick={() => openExecutePlayground(skill)}
-                  className="px-3 py-1.5 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-900 hover:text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>Execute</span>
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Create / Edit Skill Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-xl border border-neutral-200 shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-              <h2 className="text-base font-bold text-neutral-900">
-                {editingSkill ? 'Edit Skill' : 'Create Custom Skill'}
-              </h2>
-              <button onClick={() => setModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSkill} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Skill Name</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Socratic Questioner"
-                  className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none"
-                >
-                  {CATEGORIES.filter(c => c !== 'All').map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Description</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe what this skill does and when to use it..."
-                  className="w-full px-3 py-2 text-xs border border-neutral-200 rounded-lg focus:outline-none resize-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-neutral-700">Prompt Template</label>
-                  <span className="text-[11px] font-mono text-neutral-400">Use {'{text}'} placeholder</span>
-                </div>
-                <textarea
-                  required
-                  rows={5}
-                  value={promptTemplate}
-                  onChange={(e) => setPromptTemplate(e.target.value)}
-                  placeholder="Analyze the following passage and provide...: {text}"
-                  className="w-full px-3 py-2 text-xs border border-neutral-200 rounded-lg focus:outline-none font-mono resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Tags (comma-separated)</label>
-                <input
-                  type="text"
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                  placeholder="reflection, clarity, philosophy"
-                  className="w-full px-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-3.5 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-colors shadow-xs"
-                >
-                  Save Skill
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Skill Creator Modal */}
+      {creatorOpen && (
+        <SkillCreatorModal
+          isOpen={creatorOpen}
+          onClose={() => setCreatorOpen(false)}
+          onSaved={handleSkillSaved}
+          editingSkill={creatorEditingSkill}
+        />
       )}
 
-      {/* Execute Playground Modal */}
-      {executeModalOpen && executingSkill && (
-        <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white rounded-xl border border-neutral-200 shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-neutral-900" />
-                <h2 className="text-base font-bold text-neutral-900">
-                  Execute: {executingSkill.name}
-                </h2>
-              </div>
-              <button onClick={() => setExecuteModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              {executingSkill.description}
-            </p>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-neutral-700">Input Text to Transform</label>
-              <textarea
-                rows={5}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Paste or write the text you want this skill to process..."
-                className="w-full px-3 py-2 text-xs border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-none font-sans"
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={handleExecute}
-                disabled={executing || !inputText.trim()}
-                className="px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                {executing ? 'Executing Skill...' : 'Run Skill'}
-              </button>
-            </div>
-
-            {outputText && (
-              <div className="mt-4 p-4 bg-neutral-50 border border-neutral-200 rounded-xl space-y-2">
-                <div className="flex items-center justify-between text-xs font-medium text-neutral-700 border-b border-neutral-200/60 pb-2">
-                  <span>Result</span>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1 text-neutral-600 hover:text-neutral-900 cursor-pointer"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
-                  </button>
-                </div>
-                <div className="text-xs text-neutral-800 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
-                  {outputText}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Skill Detail Modal */}
+      {detailModalOpen && selectedSkillId && (
+        <SkillDetailModal
+          skillId={selectedSkillId}
+          isOpen={detailModalOpen}
+          onClose={() => setDetailModalOpen(false)}
+          onSkillUpdated={handleSkillSaved}
+          onSkillDeleted={(deletedId) => setSkills(prev => prev.filter(s => (s.id || (s as any)._id) !== deletedId))}
+          onOpenInChat={onNavigateToChat}
+        />
       )}
     </div>
   );

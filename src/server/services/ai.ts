@@ -294,6 +294,8 @@ export async function executeSkillPrompt(params: {
 
     const finalPrompt = promptTemplate.includes('{text}')
       ? promptTemplate.replace(/\{text\}/g, text)
+      : promptTemplate.includes('{input}')
+      ? promptTemplate.replace(/\{input\}/g, text)
       : `${promptTemplate}\n\nContent:\n${text}`;
 
     const { response } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
@@ -306,6 +308,324 @@ export async function executeSkillPrompt(params: {
     return text;
   }
 }
+
+export async function executeSkillAdvanced(params: {
+  promptTemplate: string;
+  skillMd?: string;
+  input: string;
+  variables?: Record<string, string>;
+  customApiKey?: string;
+  model?: string;
+}): Promise<{ output: string; durationMs: number; model: string }> {
+  const { promptTemplate, skillMd, input, variables = {}, customApiKey, model } = params;
+  const startTime = Date.now();
+
+  try {
+    const ai = getGenAIClient(customApiKey);
+
+    let compiledPrompt = promptTemplate || '';
+
+    // If variables provided, replace each {key}
+    if (variables && typeof variables === 'object') {
+      Object.entries(variables).forEach(([k, v]) => {
+        compiledPrompt = compiledPrompt.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      });
+    }
+
+    // Default variable replacements if not already replaced
+    if (compiledPrompt.includes('{text}')) {
+      compiledPrompt = compiledPrompt.replace(/\{text\}/g, input);
+    }
+    if (compiledPrompt.includes('{input}')) {
+      compiledPrompt = compiledPrompt.replace(/\{input\}/g, input);
+    }
+    if (!compiledPrompt.includes(input)) {
+      compiledPrompt = `${compiledPrompt}\n\nContent to process:\n${input}`;
+    }
+
+    // If full SKILL.md is available, ground the model with its constraints and rules
+    let promptWithContext = compiledPrompt;
+    if (skillMd && skillMd.includes('## Constraints')) {
+      promptWithContext = `[EXECUTION SPECIFICATION FOR SKILL]\n${skillMd}\n\n---\n[EXECUTION TASK]\n${compiledPrompt}`;
+    }
+
+    const { response, usedModel } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
+      contents: promptWithContext,
+    });
+
+    const durationMs = Date.now() - startTime;
+    return {
+      output: response.text?.trim() || input,
+      durationMs,
+      model: usedModel,
+    };
+  } catch (err) {
+    console.warn('[AI Service] Advanced skill execution error:', err);
+    return {
+      output: `Skill execution encountered an issue. Raw input retained:\n\n${input}`,
+      durationMs: Date.now() - startTime,
+      model: model || 'gemini-3.8-flash',
+    };
+  }
+}
+
+export async function generateSkillFromConversation(params: {
+  prompt: string;
+  conversationHistory?: Array<{ role: string; content: string }>;
+  currentDraft?: any;
+  customApiKey?: string;
+  model?: string;
+}): Promise<{
+  name: string;
+  description: string;
+  category: string;
+  promptTemplate: string;
+  variables: string[];
+  tags: string[];
+  icon: string;
+  skillMd: string;
+  assistantReply: string;
+}> {
+  const { prompt, conversationHistory = [], currentDraft, customApiKey, model } = params;
+
+  const systemInstruction = `You are the Master AI Skill Architect in LifeNote AI.
+Your job is to help users design, refine, and generate production-grade, reusable AI Skills structured as complete "SKILL.md" documents.
+
+A complete SKILL.md must strictly adhere to this format:
+---
+name: "Skill Name"
+description: "Precise summary of the skill's purpose and value"
+category: "Writing" | "Refinement" | "Planning" | "Summarization" | "Creative" | "Analysis"
+version: "1.0.0"
+inputs:
+  - text
+tags:
+  - tag1
+  - tag2
+icon: "Sparkles" | "Feather" | "BookOpen" | "Compass" | "CheckCircle" | "ListChecks" | "Moon" | "Sun" | "Coffee" | "Heart" | "Flame"
+---
+
+# [Skill Name]
+
+## Purpose
+[High-level purpose and reason for this skill]
+
+## Use Cases
+- [When to use this skill]
+- [Example scenario 2]
+
+## Required Inputs
+- \`text\`: [Description of the input]
+
+## Step-by-Step Workflow
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+## Constraints & Rules
+- [Rule 1: e.g. Preserve voice, facts, language]
+- [Rule 2: e.g. Output format rules]
+- [Rule 3: e.g. Language rules (Bengali/English)]
+
+## Examples
+### Example 1
+**Input:**
+\`\`\`
+[Realistic sample input]
+\`\`\`
+
+**Output:**
+\`\`\`
+[Realistic transformed output]
+\`\`\`
+
+## Edge Cases
+- [How to handle short, noisy, or edge input]
+
+YOUR TASK:
+Given the user's message, any conversation history, and current draft:
+1. Understand the skill's purpose, use cases, inputs, output expectations, instructions, constraints, and examples.
+2. Produce a polished, complete JSON object.
+3. In 'assistantReply', provide a short, warm, intelligent conversational response (1-2 sentences) explaining what was crafted or refined, and inviting them to test it in the live workspace.
+
+Return ONLY a valid JSON object matching this schema without markdown code blocks:
+{
+  "name": "Skill Name",
+  "description": "Short description (under 120 chars)",
+  "category": "Writing",
+  "promptTemplate": "The actual executable instructions with {text} placeholder for the model to follow",
+  "variables": ["text"],
+  "tags": ["writing", "polish"],
+  "icon": "Feather",
+  "skillMd": "The complete, pristine SKILL.md markdown text with YAML frontmatter",
+  "assistantReply": "Conversational explanation of what was built and prompt to test."
+}`;
+
+  const historyText = conversationHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
+  const draftContext = currentDraft ? `\n\nCURRENT DRAFT STATE:\n${JSON.stringify(currentDraft, null, 2)}` : '';
+
+  const fullPrompt = `${systemInstruction}
+
+${draftContext}
+
+=== Conversation History ===
+${historyText ? historyText : '(No prior messages)'}
+
+User Request: "${prompt}"
+
+Return ONLY valid JSON:`;
+
+  try {
+    const ai = getGenAIClient(customApiKey);
+    const { response } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
+      contents: fullPrompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const raw = (response.text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(raw);
+
+    return {
+      name: parsed.name || 'Custom Skill',
+      description: parsed.description || 'Custom LifeNote AI skill',
+      category: parsed.category || 'Writing',
+      promptTemplate: parsed.promptTemplate || 'Transform the following text:\n\n"{text}"',
+      variables: Array.isArray(parsed.variables) && parsed.variables.length > 0 ? parsed.variables : ['text'],
+      tags: Array.isArray(parsed.tags) ? parsed.tags : ['custom'],
+      icon: parsed.icon || 'Sparkles',
+      skillMd: parsed.skillMd || '',
+      assistantReply: parsed.assistantReply || 'I have crafted your skill specification and generated the SKILL.md file.',
+    };
+  } catch (err) {
+    console.warn('[AI Service] generateSkillFromConversation fallback:', err);
+    // Smart deterministic fallback
+    const cleanName = prompt.slice(0, 32).trim() || 'Custom Skill';
+    const fallbackTemplate = `Execute the following task with high precision and clarity:\n${prompt}\n\nInput Content:\n"{text}"`;
+    const fallbackMd = `---
+name: "${cleanName}"
+description: "AI skill designed for: ${prompt.slice(0, 80)}"
+category: Writing
+version: 1.0.0
+inputs:
+  - text
+tags:
+  - custom
+icon: Sparkles
+---
+
+# ${cleanName}
+
+## Purpose
+${prompt}
+
+## Required Inputs
+- \`text\`: The raw content to process.
+
+## Step-by-Step Workflow
+1. Read and analyze the input text carefully.
+2. Apply the desired transformation according to the user's intent.
+3. Review for clarity, flow, and faithfulness.
+4. Output the result cleanly without conversational commentary.
+
+## Constraints & Rules
+- Retain the authentic voice and intent of the input.
+- If the text is in Bengali, produce natural, refined Bengali.
+- Output ONLY the result.
+
+## Examples
+### Example 1
+**Input:**
+\`\`\`
+Sample text
+\`\`\`
+
+**Output:**
+\`\`\`
+Polished transformation
+\`\`\`
+
+## Edge Cases
+- For empty or ultra-short input, ask for clarification or provide a meaningful reflection.
+`;
+
+    return {
+      name: cleanName,
+      description: `Skill for: ${prompt.slice(0, 70)}...`,
+      category: 'Writing',
+      promptTemplate: fallbackTemplate,
+      variables: ['text'],
+      tags: ['custom'],
+      icon: 'Sparkles',
+      skillMd: fallbackMd,
+      assistantReply: 'I have generated your skill structure and SKILL.md. You can now test it with sample inputs or refine its instructions.',
+    };
+  }
+}
+
+export async function refineSkillFromFeedback(params: {
+  currentSkillMd: string;
+  feedback: string;
+  testOutput?: string;
+  customApiKey?: string;
+  model?: string;
+}): Promise<{
+  skillMd: string;
+  promptTemplate: string;
+  description: string;
+  explanation: string;
+}> {
+  const { currentSkillMd, feedback, testOutput, customApiKey, model } = params;
+
+  const prompt = `You are an expert AI Skill Engineer.
+A user tested a skill and wants to refine its instructions, workflow, or constraints.
+
+CURRENT SKILL.MD:
+"""
+${currentSkillMd}
+"""
+
+${testOutput ? `RECENT TEST OUTPUT:\n"""\n${testOutput}\n"""\n` : ''}
+
+USER REFINEMENT FEEDBACK:
+"${feedback}"
+
+TASK:
+1. Update the SKILL.md document to address the user's feedback precisely (e.g. adjust workflow, add/refine rules, improve examples, fix edge cases).
+2. Extract the updated executable 'promptTemplate'.
+3. Increment or maintain version appropriately.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "skillMd": "The updated complete SKILL.md",
+  "promptTemplate": "The updated executable prompt template",
+  "description": "Updated or current description",
+  "explanation": "Brief explanation of what was modified"
+}`;
+
+  try {
+    const ai = getGenAIClient(customApiKey);
+    const { response } = await generateWithFallback(ai, model || 'gemini-3.8-flash', {
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const raw = (response.text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('[AI Service] refineSkillFromFeedback fallback:', err);
+    return {
+      skillMd: currentSkillMd,
+      promptTemplate: 'Please execute according to instructions:\n"{text}"',
+      description: 'Custom skill',
+      explanation: 'Could not automatically refine; please edit the markdown directly.',
+    };
+  }
+}
+
 
 export function craftBeautifulJournalEntry(input: string, _todayStr?: string): string {
   const clean = (input || '').trim();

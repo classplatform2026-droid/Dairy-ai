@@ -91,8 +91,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, o
                   <BookMarked className="w-3.5 h-3.5 text-neutral-700" />
                 </div>
                 <div>
-                  <div className="font-semibold text-neutral-900">Reader Mode</div>
-                  <div className="text-[10px] text-neutral-400">Book format reading</div>
+                  <div className="font-semibold text-neutral-900">Library & Bookshelf</div>
+                  <div className="text-[10px] text-neutral-400">Book covers & reading</div>
                 </div>
               </button>
 

@@ -19,11 +19,12 @@ import {
 interface BooksViewProps {
   initialBookId?: string;
   initialCreateNew?: boolean;
+  onOpenReader?: (bookId: string) => void;
 }
 
 const GENRES = ['Memoir', 'Fiction', 'Essays', 'Poetry', 'Philosophy', 'Personal Development', 'Sci-Fi', 'Biography'];
 
-export const BooksView: React.FC<BooksViewProps> = ({ initialBookId, initialCreateNew }) => {
+export const BooksView: React.FC<BooksViewProps> = ({ initialBookId, initialCreateNew, onOpenReader }) => {
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
@@ -326,7 +327,14 @@ export const BooksView: React.FC<BooksViewProps> = ({ initialBookId, initialCrea
         <div className="flex items-center gap-2.5">
           {selectedBook && (
             <button
-              onClick={() => setReaderOpen(true)}
+              onClick={() => {
+                const bId = selectedBook.id || (selectedBook as any)._id;
+                if (onOpenReader) {
+                  onOpenReader(bId);
+                } else {
+                  setReaderOpen(true);
+                }
+              }}
               className="px-3.5 py-2 text-xs font-medium text-neutral-800 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <BookOpen className="w-3.5 h-3.5 text-neutral-700" />

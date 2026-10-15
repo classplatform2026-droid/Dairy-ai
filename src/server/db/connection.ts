@@ -382,7 +382,7 @@ export const db = {
       if (isMongooseConnected) {
         const query: any = { $or: [{ isSystem: true }] };
         if (userId) query.$or.push({ userId });
-        const skills = await SkillModel.find(query).lean();
+        const skills = await SkillModel.find(query).sort({ updatedAt: -1 }).lean();
         return skills.map(s => ({ ...s, id: s._id.toString() }));
       }
       return localStore.getSkills(userId);
@@ -399,16 +399,29 @@ export const db = {
     },
     create: async (userId: string, data: any) => {
       if (isMongooseConnected) {
+        const now = new Date().toISOString();
         const skill = await SkillModel.create({
           userId,
           isSystem: false,
           name: data.name,
           category: data.category || 'Writing',
           description: data.description,
+          skillMd: data.skillMd || '',
           promptTemplate: data.promptTemplate,
           variables: data.variables || ['text'],
           tags: data.tags || [],
           icon: data.icon || 'Sparkles',
+          version: 1,
+          versionHistory: [
+            {
+              version: 1,
+              skillMd: data.skillMd || '',
+              promptTemplate: data.promptTemplate,
+              changeNote: 'Initial skill creation',
+              savedAt: now,
+            }
+          ],
+          executionHistory: [],
         });
         return { ...skill.toObject(), id: skill._id.toString() };
       }
@@ -416,10 +429,84 @@ export const db = {
     },
     update: async (userId: string, id: string, updates: any) => {
       if (isMongooseConnected) {
-        const s = await SkillModel.findOneAndUpdate({ _id: id, userId, isSystem: false }, { $set: updates }, { new: true }).lean();
-        return s ? { ...s, id: s._id.toString() } : null;
+        const existing = await SkillModel.findOne({ _id: id, userId, isSystem: false });
+        if (!existing) return null;
+
+        const isMajorChange = updates.skillMd !== undefined && updates.skillMd !== existing.skillMd;
+        const newVersion = isMajorChange ? (existing.version || 1) + 1 : (existing.version || 1);
+
+        if (isMajorChange) {
+          existing.versionHistory = existing.versionHistory || [];
+          existing.versionHistory.unshift({
+            version: newVersion,
+            skillMd: updates.skillMd,
+            promptTemplate: updates.promptTemplate || existing.promptTemplate,
+            changeNote: updates.changeNote || `Updated to version ${newVersion}`,
+            savedAt: new Date().toISOString(),
+          } as any);
+        }
+
+        Object.assign(existing, updates);
+        existing.version = newVersion;
+        await existing.save();
+        const obj = existing.toObject();
+        return { ...obj, id: obj._id.toString() };
       }
       return localStore.updateSkill(userId, id, updates);
+    },
+    recordExecution: async (userId: string, id: string, execution: {
+      input: string;
+      output: string;
+      model: string;
+      durationMs: number;
+      status: string;
+    }) => {
+      if (isMongooseConnected) {
+        const entry = {
+          id: 'exec_' + Math.random().toString(36).substr(2, 9),
+          ...execution,
+          executedAt: new Date().toISOString(),
+        };
+        await SkillModel.updateOne(
+          { _id: id, $or: [{ isSystem: true }, { userId }] },
+          {
+            $push: {
+              executionHistory: {
+                $each: [entry],
+                $slice: -30, // keep latest 30 runs
+                $position: 0,
+              }
+            }
+          }
+        );
+        return entry;
+      }
+      return localStore.recordSkillExecution(userId, id, execution);
+    },
+    restoreVersion: async (userId: string, id: string, versionNumber: number) => {
+      if (isMongooseConnected) {
+        const skill = await SkillModel.findOne({ _id: id, userId, isSystem: false });
+        if (!skill) return null;
+        const snapshot = (skill.versionHistory || []).find((v: any) => v.version === versionNumber);
+        if (!snapshot) return null;
+
+        const restoredVersion = (skill.version || 1) + 1;
+        skill.versionHistory.unshift({
+          version: restoredVersion,
+          skillMd: snapshot.skillMd,
+          promptTemplate: snapshot.promptTemplate,
+          changeNote: `Restored from version ${versionNumber}`,
+          savedAt: new Date().toISOString(),
+        } as any);
+
+        skill.skillMd = snapshot.skillMd;
+        skill.promptTemplate = snapshot.promptTemplate;
+        skill.version = restoredVersion;
+        await skill.save();
+        const obj = skill.toObject();
+        return { ...obj, id: obj._id.toString() };
+      }
+      return localStore.restoreSkillVersion(userId, id, versionNumber);
     },
     delete: async (userId: string, id: string) => {
       if (isMongooseConnected) {

@@ -148,6 +148,8 @@ export const api = {
   skills: {
     list: () =>
       request<{ skills: any[] }>('/skills'),
+    get: (id: string) =>
+      request<{ skill: any }>(`/skills/${id}`),
     create: (data: any) =>
       request<{ skill: any }>('/skills', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
@@ -155,7 +157,43 @@ export const api = {
     delete: (id: string) =>
       request<{ success: boolean }>(`/skills/${id}`, { method: 'DELETE' }),
     execute: (id: string, text: string) =>
-      request<{ skillId: string; skillName: string; output: string }>(`/skills/${id}/execute`, { method: 'POST', body: JSON.stringify({ text }) }),
+      request<{ skillId: string; skillName: string; output: string; durationMs?: number; model?: string }>(`/skills/${id}/execute`, { method: 'POST', body: JSON.stringify({ text }) }),
+    generateSpec: (data: { prompt: string; conversationHistory?: any[]; currentDraft?: any }) =>
+      request<{
+        name: string;
+        description: string;
+        category: string;
+        promptTemplate: string;
+        variables: string[];
+        tags: string[];
+        icon: string;
+        skillMd: string;
+        assistantReply: string;
+      }>('/skills/generate-spec', { method: 'POST', body: JSON.stringify(data) }),
+    refineSpec: (data: { skillMd: string; feedback: string; testOutput?: string }) =>
+      request<{
+        skillMd: string;
+        promptTemplate: string;
+        description: string;
+        explanation: string;
+      }>('/skills/refine-spec', { method: 'POST', body: JSON.stringify(data) }),
+    testDraft: (data: { promptTemplate?: string; skillMd?: string; input: string; variables?: Record<string, string> }) =>
+      request<{ output: string; durationMs: number; model: string }>('/skills/test-draft', { method: 'POST', body: JSON.stringify(data) }),
+    test: (id: string, data: { input: string; variables?: Record<string, string> }) =>
+      request<{ output: string; durationMs: number; model: string; logEntry?: any }>(`/skills/${id}/test`, { method: 'POST', body: JSON.stringify(data) }),
+    restoreVersion: (id: string, versionNumber: number) =>
+      request<{ success: boolean; skill: any }>(`/skills/${id}/restore-version/${versionNumber}`, { method: 'POST' }),
+    parseMarkdown: (markdown: string) =>
+      request<{
+        name: string;
+        description: string;
+        category: string;
+        icon: string;
+        tags: string[];
+        variables: string[];
+        promptTemplate: string;
+        skillMd: string;
+      }>('/skills/parse-markdown', { method: 'POST', body: JSON.stringify({ markdown }) }),
   },
 
   // Chats

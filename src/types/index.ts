@@ -85,18 +85,40 @@ export interface Book {
   updatedAt: string;
 }
 
+export interface SkillVersion {
+  version: number;
+  skillMd: string;
+  promptTemplate: string;
+  changeNote?: string;
+  savedAt: string;
+}
+
+export interface SkillExecution {
+  id: string;
+  input: string;
+  output: string;
+  model: string;
+  durationMs: number;
+  status: 'success' | 'failed';
+  executedAt: string;
+}
+
 export interface Skill {
   id: string;
   _id?: string;
   userId?: string;
   isSystem: boolean;
   name: string;
-  category: 'Writing' | 'Refinement' | 'Planning' | 'Summarization' | 'Creative' | string;
+  category: 'Writing' | 'Refinement' | 'Planning' | 'Summarization' | 'Creative' | 'Analysis' | string;
   description: string;
+  skillMd?: string;
   promptTemplate: string;
   variables: string[];
   tags: string[];
   icon: string;
+  version?: number;
+  versionHistory?: SkillVersion[];
+  executionHistory?: SkillExecution[];
   createdAt: string;
   updatedAt: string;
 }
